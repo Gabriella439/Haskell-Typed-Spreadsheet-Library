@@ -10,7 +10,7 @@ module Control.Applicative.Cell (
     , int
     , double
     , text
-    , spreadsheet
+    , setup
     , runManaged
     ) where
 
@@ -50,13 +50,39 @@ instance Applicative Cell where
             fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
 
 data Control = Control
-    { int    :: Text -> Cell Int
-    , double :: Text -> Double -> Cell Double
-    , text   :: Text -> Cell Text
+    { _int    :: Text -> Cell Int
+    , _double :: Text -> Double -> Cell Double
+    , _text   :: Text -> Cell Text
     }
 
-spreadsheet :: Managed (Control, Cell Text -> Managed ())
-spreadsheet = managed (\k -> do
+int
+    :: Control
+    -- ^
+    -> Text
+    -- ^ Label
+    -> Cell Int
+int = _int
+
+double
+    :: Control
+    -- ^
+    -> Text
+    -- ^ Label
+    -> Double
+    -- ^ Step size
+    -> Cell Double
+double = _double
+
+text
+    :: Control
+    -- ^
+    -> Text
+    -- ^ Label
+    -> Cell Text
+text = _text
+
+setup :: Managed (Control, Cell Text -> Managed ())
+setup = managed (\k -> do
     _ <- Gtk.initGUI
 
     window <- Gtk.windowNew
@@ -93,8 +119,8 @@ spreadsheet = managed (\k -> do
         , Gtk.windowDefaultHeight := 400
         ]
 
-    let _double :: Text -> Double -> Cell Double
-        _double label stepX = Cell (liftIO (do
+    let __double :: Text -> Double -> Cell Double
+        __double label stepX = Cell (liftIO (do
             tmvar      <- STM.newEmptyTMVarIO
             let minX = fromIntegral (minBound :: Int)
             let maxX = fromIntegral (maxBound :: Int)
@@ -119,11 +145,11 @@ spreadsheet = managed (\k -> do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef 0) ))
 
-    let _int :: Text -> Cell Int
-        _int label = fmap truncate (_double label 1)
+    let __int :: Text -> Cell Int
+        __int label = fmap truncate (__double label 1)
 
-    let _text :: Text -> Cell Text
-        _text label = Cell (liftIO (do
+    let __text :: Text -> Cell Text
+        __text label = Cell (liftIO (do
             entry <- Gtk.entryNew
             Gtk.set entry
                 [ Gtk.widgetMarginLeft   := 1
@@ -147,9 +173,9 @@ spreadsheet = managed (\k -> do
             return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) ))
 
     let controls = Control
-            { int     = _int
-            , double  = _double
-            , text    = _text
+            { _int     = __int
+            , _double  = __double
+            , _text    = __text
             }
 
     doneTMVar <- STM.newEmptyTMVarIO
@@ -182,11 +208,11 @@ spreadsheet = managed (\k -> do
 
 -- TODO: Remove this
 main = runManaged (do
-    (control, run) <- spreadsheet
+    (control, run) <- setup
 
     let f x y = Text.pack (show x) <> " " <> y
 
-    let result = f <$> int  control "Count"
+    let result = f <$> double control "Count" 0.01
                    <*> text control "Noun"
 
     run result )
