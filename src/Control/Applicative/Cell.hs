@@ -62,6 +62,7 @@ spreadsheet = managed (\k -> do
     Gtk.set textView
         [ Gtk.textViewEditable      := False
         , Gtk.textViewCursorVisible := False
+        , Gtk.textViewLeftMargin    := 5
         ]
 
     hAdjust <- Gtk.textViewGetHadjustment textView
@@ -104,7 +105,11 @@ spreadsheet = managed (\k -> do
 
     let _text :: Cell Text
         _text = Cell (liftIO (do
-            textView       <- Gtk.textViewNew
+            textView <- Gtk.textViewNew
+            Gtk.set textView
+                [ Gtk.textViewLeftMargin    := 5
+                ]
+
             textBuffer     <- Gtk.get textView Gtk.textViewBuffer
             hAdjust        <- Gtk.textViewGetHadjustment textView
             vAdjust        <- Gtk.textViewGetVadjustment textView
@@ -113,10 +118,12 @@ spreadsheet = managed (\k -> do
                 [ Gtk.containerChild           := textView
                 , Gtk.scrolledWindowShadowType := Gtk.ShadowIn
                 ]
+
             tmvar <- STM.newEmptyTMVarIO
             _     <- Gtk.on textBuffer Gtk.bufferChanged (do
                 txt <- Gtk.get textBuffer Gtk.textBufferText
                 STM.atomically (STM.putTMVar tmvar txt) )
+
             Gtk.boxPackStart vBox scrolledWindow Gtk.PackNatural 0
             Gtk.widgetShowAll scrolledWindow
             return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) ))
