@@ -6,7 +6,10 @@
 
 module Control.Applicative.Cell (
       Cell
-    , Controls(..)
+    , Control
+    , int
+    , double
+    , text
     , spreadsheet
     , runManaged
     ) where
@@ -46,13 +49,13 @@ instance Applicative Cell where
 
             fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
 
-data Controls = Controls
-    { int     :: Label -> Int     -> Int     -> Cell Int
-    , double  :: Label -> Double  -> Double  -> Double  -> Cell Double
-    , text    :: Label -> Cell Text
+data Control = Control
+    { int    :: Text -> Cell Int
+    , double :: Text -> Double -> Cell Double
+    , text   :: Text -> Cell Text
     }
 
-spreadsheet :: Managed (Controls, Cell Text -> Managed ())
+spreadsheet :: Managed (Control, Cell Text -> Managed ())
 spreadsheet = managed (\k -> do
     _ <- Gtk.initGUI
 
@@ -86,18 +89,21 @@ spreadsheet = managed (\k -> do
     Gtk.set window
         [ Gtk.windowTitle         := ("Haskell Spreadsheet" :: Text)
         , Gtk.containerChild      := hBox
-        , Gtk.windowDefaultWidth  := 400
+        , Gtk.windowDefaultWidth  := 600
         , Gtk.windowDefaultHeight := 400
         ]
 
-    let _double :: Label -> Double -> Double -> Double -> Cell Double
-        _double (Label label) minX maxX stepX = Cell (liftIO (do
+    let _double :: Text -> Double -> Cell Double
+        _double label stepX = Cell (liftIO (do
             tmvar      <- STM.newEmptyTMVarIO
+            let minX = fromIntegral (minBound :: Int)
+            let maxX = fromIntegral (maxBound :: Int)
             spinButton <- Gtk.spinButtonNewWithRange minX maxX stepX
             Gtk.set spinButton
                 [ Gtk.widgetMarginLeft   := 1
                 , Gtk.widgetMarginRight  := 1
                 , Gtk.widgetMarginBottom := 1
+                , Gtk.spinButtonValue    := 0
                 ]
             _          <- Gtk.onValueSpinned spinButton (do
                 n <- Gtk.get spinButton Gtk.spinButtonValue
@@ -113,14 +119,11 @@ spreadsheet = managed (\k -> do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef 0) ))
 
-    let _int :: Label -> Int -> Int -> Cell Int
-        _int label minX maxX =
-            let minX' = fromIntegral  minX
-                maxX' = fromIntegral  maxX
-            in  fmap truncate (_double label minX' maxX' 1)
+    let _int :: Text -> Cell Int
+        _int label = fmap truncate (_double label 1)
 
-    let _text :: Label -> Cell Text
-        _text (Label label) = Cell (liftIO (do
+    let _text :: Text -> Cell Text
+        _text label = Cell (liftIO (do
             entry <- Gtk.entryNew
             Gtk.set entry
                 [ Gtk.widgetMarginLeft   := 1
@@ -143,7 +146,7 @@ spreadsheet = managed (\k -> do
             Gtk.widgetShowAll frame
             return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) ))
 
-    let controls = Controls
+    let controls = Control
             { int     = _int
             , double  = _double
             , text    = _text
@@ -181,9 +184,9 @@ spreadsheet = managed (\k -> do
 main = runManaged (do
     (control, run) <- spreadsheet
 
-    let f x y = Text.pack (show x) <> Text.pack " " <> y
+    let f x y = Text.pack (show x) <> " " <> y
 
-    let result = f <$> int  control "Count" 0 100
+    let result = f <$> int  control "Count"
                    <*> text control "Noun"
 
     run result )
