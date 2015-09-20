@@ -1,5 +1,8 @@
-{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE ExistentialQuantification  #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 {-# LANGUAGE RecordWildCards           #-}
+{-# LANGUAGE OverloadedStrings         #-}
 -- TODO: Remove this
 
 module Control.Applicative.Cell (
@@ -13,6 +16,7 @@ import Control.Applicative (Applicative(..), Alternative(..), liftA2)
 import Control.Concurrent.STM (STM)
 import Control.Foldl (Fold(..))
 import Control.Monad.Managed (Managed, liftIO, managed, runManaged)
+import Data.String (IsString)
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import Lens.Micro (_Left, _Right)
@@ -24,6 +28,8 @@ import qualified Control.Foldl            as Fold
 import qualified Control.Monad.Managed    as Managed
 import qualified Data.Text                as Text
 import qualified Graphics.UI.Gtk          as Gtk
+
+newtype Label = Label { getLabel :: Text } deriving (IsString)
 
 data Cell a = forall e . Cell (Managed (STM e, Fold e a))
 
@@ -42,10 +48,10 @@ instance Applicative Cell where
             fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
 
 data Controls = Controls
-    { int     :: Int     -> Int     -> Cell Int
-    , integer :: Integer -> Integer -> Cell Integer
-    , double  :: Double  -> Double  -> Double  -> Cell Double
-    , text    :: Cell Text
+    { int     :: Label -> Int     -> Int     -> Cell Int
+    , integer :: Label -> Integer -> Integer -> Cell Integer
+    , double  :: Label -> Double  -> Double  -> Double  -> Cell Double
+    , text    :: Label -> Cell Text
     }
 
 spreadsheet :: Managed (Controls, Cell Text -> Managed ())
@@ -80,34 +86,46 @@ spreadsheet = managed (\k -> do
     Gtk.boxPackStart hBox scrolledWindow Gtk.PackGrow    0
 
     Gtk.set window
-        [ Gtk.windowTitle         := "Haskell Spreadsheet"
+        [ Gtk.windowTitle         := ("Haskell Spreadsheet" :: String)
         , Gtk.containerChild      := hBox
         , Gtk.windowDefaultWidth  := 400
         , Gtk.windowDefaultHeight := 400
         ]
 
-    let _double :: Double -> Double -> Double -> Cell Double
-        _double minX maxX stepX = Cell (liftIO (do
+    let _double :: Label -> Double -> Double -> Double -> Cell Double
+        _double (Label label) minX maxX stepX = Cell (liftIO (do
             tmvar      <- STM.newEmptyTMVarIO
             spinButton <- Gtk.spinButtonNewWithRange minX maxX stepX
+            Gtk.set spinButton
+                [ Gtk.widgetMarginLeft   := 1
+                , Gtk.widgetMarginRight  := 1
+                , Gtk.widgetMarginBottom := 1
+                ]
             _          <- Gtk.onValueSpinned spinButton (do
                 n <- Gtk.get spinButton Gtk.spinButtonValue
                 STM.atomically (STM.putTMVar tmvar n) )
-            Gtk.boxPackStart vBox spinButton Gtk.PackNatural 0
+
+            frame <- Gtk.frameNew
+            Gtk.set frame
+                [ Gtk.containerChild := spinButton
+                , Gtk.frameLabel     := label
+                ]
+
+            Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef 0) ))
 
-    let _integral :: Integral n => n -> n -> Cell n
-        _integral minX maxX =
+    let _integral :: Integral n => Label -> n -> n -> Cell n
+        _integral label minX maxX =
             let minX' = fromIntegral  minX
                 maxX' = fromIntegral  maxX
-            in  fmap truncate (_double minX' maxX' 1)
+            in  fmap truncate (_double label minX' maxX' 1)
 
-    let _text :: Cell Text
-        _text = Cell (liftIO (do
+    let _text :: Label -> Cell Text
+        _text (Label label) = Cell (liftIO (do
             textView <- Gtk.textViewNew
             Gtk.set textView
-                [ Gtk.textViewLeftMargin    := 5
+                [ Gtk.textViewLeftMargin := 5
                 ]
 
             textBuffer     <- Gtk.get textView Gtk.textViewBuffer
@@ -115,8 +133,17 @@ spreadsheet = managed (\k -> do
             vAdjust        <- Gtk.textViewGetVadjustment textView
             scrolledWindow <- Gtk.scrolledWindowNew (Just hAdjust) (Just vAdjust)
             Gtk.set scrolledWindow
-                [ Gtk.containerChild           := textView
+                [ Gtk.widgetMarginLeft   := 1
+                , Gtk.widgetMarginRight  := 1
+                , Gtk.widgetMarginBottom := 1
+                , Gtk.containerChild           := textView
                 , Gtk.scrolledWindowShadowType := Gtk.ShadowIn
+                ]
+
+            frame <- Gtk.frameNew
+            Gtk.set frame
+                [ Gtk.containerChild := scrolledWindow
+                , Gtk.frameLabel     := label
                 ]
 
             tmvar <- STM.newEmptyTMVarIO
@@ -124,8 +151,8 @@ spreadsheet = managed (\k -> do
                 txt <- Gtk.get textBuffer Gtk.textBufferText
                 STM.atomically (STM.putTMVar tmvar txt) )
 
-            Gtk.boxPackStart vBox scrolledWindow Gtk.PackNatural 0
-            Gtk.widgetShowAll scrolledWindow
+            Gtk.boxPackStart vBox frame Gtk.PackNatural 0
+            Gtk.widgetShowAll frame
             return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) ))
 
     let controls = Controls
@@ -169,7 +196,7 @@ main = runManaged (do
 
     let f x y = Text.pack (show x) <> Text.pack " " <> y
 
-    let result = f <$> int 0 100
-                   <*> text
+    let result = f <$> int "Count" 0 100
+                   <*> text "Noun"
 
     run result )
