@@ -13,6 +13,7 @@ import Control.Applicative (Applicative(..), Alternative(..), liftA2)
 import Control.Concurrent.STM (STM)
 import Control.Foldl (Fold(..))
 import Control.Monad.Managed (Managed, liftIO, managed, runManaged)
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import Lens.Micro (_Left, _Right)
 import Graphics.UI.Gtk (AttrOp((:=)))
@@ -41,7 +42,10 @@ instance Applicative Cell where
             fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
 
 data Controls = Controls
-    { double :: Double -> Double -> Double -> Cell Double
+    { int     :: Int     -> Int     -> Cell Int
+    , integer :: Integer -> Integer -> Cell Integer
+    , double  :: Double  -> Double  -> Double  -> Cell Double
+    , text    :: Cell Text
     }
 
 spreadsheet :: Managed (Controls, Cell Text -> Managed ())
@@ -92,8 +96,36 @@ spreadsheet = managed (\k -> do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef 0) ))
 
+    let _integral :: Integral n => n -> n -> Cell n
+        _integral minX maxX =
+            let minX' = fromIntegral  minX
+                maxX' = fromIntegral  maxX
+            in  fmap truncate (_double minX' maxX' 1)
+
+    let _text :: Cell Text
+        _text = Cell (liftIO (do
+            textView       <- Gtk.textViewNew
+            textBuffer     <- Gtk.get textView Gtk.textViewBuffer
+            hAdjust        <- Gtk.textViewGetHadjustment textView
+            vAdjust        <- Gtk.textViewGetVadjustment textView
+            scrolledWindow <- Gtk.scrolledWindowNew (Just hAdjust) (Just vAdjust)
+            Gtk.set scrolledWindow
+                [ Gtk.containerChild           := textView
+                , Gtk.scrolledWindowShadowType := Gtk.ShadowIn
+                ]
+            tmvar <- STM.newEmptyTMVarIO
+            _     <- Gtk.on textBuffer Gtk.bufferChanged (do
+                txt <- Gtk.get textBuffer Gtk.textBufferText
+                STM.atomically (STM.putTMVar tmvar txt) )
+            Gtk.boxPackStart vBox scrolledWindow Gtk.PackNatural 0
+            Gtk.widgetShowAll scrolledWindow
+            return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) ))
+
     let controls = Controls
-            { double = _double
+            { int     = _integral
+            , integer = _integral
+            , double  = _double
+            , text    = _text
             }
 
     doneTMVar <- STM.newEmptyTMVarIO
@@ -128,8 +160,9 @@ spreadsheet = managed (\k -> do
 main = runManaged (do
     (Controls{..}, run) <- spreadsheet
 
-    let f x y = Text.pack (show (x ** y))
+    let f x y = Text.pack (show x) <> Text.pack " " <> y
 
-    let result = f <$> double 0 100 1
-                   <*> double 0 100 1
+    let result = f <$> int 0 100
+                   <*> text
+
     run result )
