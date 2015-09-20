@@ -1,7 +1,6 @@
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-{-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE OverloadedStrings         #-}
 -- TODO: Remove this
 
@@ -180,11 +179,11 @@ spreadsheet = managed (\k -> do
 
 -- TODO: Remove this
 main = runManaged (do
-    (Controls{..}, run) <- spreadsheet
+    (control, run) <- spreadsheet
 
     let f x y = Text.pack (show x) <> Text.pack " " <> y
 
-    let result = f <$> int "Count" 0 100
-                   <*> text "Noun"
+    let result = f <$> int  control "Count" 0 100
+                   <*> text control "Noun"
 
     run result )
