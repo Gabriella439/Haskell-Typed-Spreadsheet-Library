@@ -50,11 +50,21 @@ instance Applicative Cell where
             fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
 
 data Control = Control
-    { _int    :: Text -> Cell Int
+    { _bool   :: Text -> Cell Bool
+    , _int    :: Text -> Cell Int
     , _double :: Text -> Double -> Cell Double
     , _text   :: Text -> Cell Text
     }
 
+-- | A `Bool` control
+bool
+    :: Control
+    -> Text
+    -- ^ Label
+    -> Cell Bool
+bool = _bool
+
+-- | An `Int` control
 int
     :: Control
     -- ^
@@ -63,6 +73,7 @@ int
     -> Cell Int
 int = _int
 
+-- | A `Double` control
 double
     :: Control
     -- ^
@@ -73,6 +84,7 @@ double
     -> Cell Double
 double = _double
 
+-- | A `Text` control
 text
     :: Control
     -- ^
@@ -113,7 +125,7 @@ setup = managed (\k -> do
     Gtk.boxPackStart hBox scrolledWindow Gtk.PackGrow    0
 
     Gtk.set window
-        [ Gtk.windowTitle         := ("Haskell Spreadsheet" :: Text)
+        [ Gtk.windowTitle         := ("Haskell Playground" :: Text)
         , Gtk.containerChild      := hBox
         , Gtk.windowDefaultWidth  := 600
         , Gtk.windowDefaultHeight := 400
@@ -145,6 +157,19 @@ setup = managed (\k -> do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef 0) ))
 
+    let __bool :: Text -> Cell Bool
+        __bool label = Cell (liftIO (do
+            checkButton <- Gtk.checkButtonNewWithLabel label
+
+            tmvar <- STM.newEmptyTMVarIO
+            _     <- Gtk.on checkButton Gtk.toggled (do
+                pressed <- Gtk.get checkButton Gtk.toggleButtonActive
+                STM.atomically (STM.putTMVar tmvar pressed) )
+
+            Gtk.boxPackStart vBox checkButton Gtk.PackNatural 0
+            Gtk.widgetShowAll vBox
+            return (STM.takeTMVar tmvar, Fold.lastDef False) ))
+
     let __int :: Text -> Cell Int
         __int label = fmap truncate (__double label 1)
 
@@ -173,7 +198,8 @@ setup = managed (\k -> do
             return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) ))
 
     let controls = Control
-            { _int     = __int
+            { _bool    = __bool
+            , _int     = __int
             , _double  = __double
             , _text    = __text
             }
@@ -212,7 +238,7 @@ main = runManaged (do
 
     let f x y = Text.pack (show x) <> " " <> y
 
-    let result = f <$> double control "Count" 0.01
+    let result = f <$> bool control "Pressed"
                    <*> text control "Noun"
 
     run result )
