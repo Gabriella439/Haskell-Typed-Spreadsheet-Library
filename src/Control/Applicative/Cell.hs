@@ -49,7 +49,6 @@ instance Applicative Cell where
 
 data Controls = Controls
     { int     :: Label -> Int     -> Int     -> Cell Int
-    , integer :: Label -> Integer -> Integer -> Cell Integer
     , double  :: Label -> Double  -> Double  -> Double  -> Cell Double
     , text    :: Label -> Cell Text
     }
@@ -115,8 +114,8 @@ spreadsheet = managed (\k -> do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef 0) ))
 
-    let _integral :: Integral n => Label -> n -> n -> Cell n
-        _integral label minX maxX =
+    let _int :: Label -> Int -> Int -> Cell Int
+        _int label minX maxX =
             let minX' = fromIntegral  minX
                 maxX' = fromIntegral  maxX
             in  fmap truncate (_double label minX' maxX' 1)
@@ -146,8 +145,7 @@ spreadsheet = managed (\k -> do
             return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) ))
 
     let controls = Controls
-            { int     = _integral
-            , integer = _integral
+            { int     = _int
             , double  = _double
             , text    = _text
             }
