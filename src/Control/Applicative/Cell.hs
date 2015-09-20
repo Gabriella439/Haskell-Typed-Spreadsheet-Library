@@ -86,7 +86,7 @@ spreadsheet = managed (\k -> do
     Gtk.boxPackStart hBox scrolledWindow Gtk.PackGrow    0
 
     Gtk.set window
-        [ Gtk.windowTitle         := ("Haskell Spreadsheet" :: String)
+        [ Gtk.windowTitle         := ("Haskell Spreadsheet" :: Text)
         , Gtk.containerChild      := hBox
         , Gtk.windowDefaultWidth  := 400
         , Gtk.windowDefaultHeight := 400
@@ -123,32 +123,22 @@ spreadsheet = managed (\k -> do
 
     let _text :: Label -> Cell Text
         _text (Label label) = Cell (liftIO (do
-            textView <- Gtk.textViewNew
-            Gtk.set textView
-                [ Gtk.textViewLeftMargin := 5
-                ]
-
-            textBuffer     <- Gtk.get textView Gtk.textViewBuffer
-            hAdjust        <- Gtk.textViewGetHadjustment textView
-            vAdjust        <- Gtk.textViewGetVadjustment textView
-            scrolledWindow <- Gtk.scrolledWindowNew (Just hAdjust) (Just vAdjust)
-            Gtk.set scrolledWindow
+            entry <- Gtk.entryNew
+            Gtk.set entry
                 [ Gtk.widgetMarginLeft   := 1
                 , Gtk.widgetMarginRight  := 1
                 , Gtk.widgetMarginBottom := 1
-                , Gtk.containerChild           := textView
-                , Gtk.scrolledWindowShadowType := Gtk.ShadowIn
                 ]
 
             frame <- Gtk.frameNew
             Gtk.set frame
-                [ Gtk.containerChild := scrolledWindow
+                [ Gtk.containerChild := entry
                 , Gtk.frameLabel     := label
                 ]
 
             tmvar <- STM.newEmptyTMVarIO
-            _     <- Gtk.on textBuffer Gtk.bufferChanged (do
-                txt <- Gtk.get textBuffer Gtk.textBufferText
+            _     <- Gtk.on entry Gtk.editableChanged (do
+                txt <- Gtk.get entry Gtk.entryText
                 STM.atomically (STM.putTMVar tmvar txt) )
 
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
