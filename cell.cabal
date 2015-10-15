@@ -21,7 +21,7 @@ Library
         base      >= 4      && < 5   ,
         async     >= 2.0    && < 2.1 ,
         foldl     >= 1.1    && < 1.2 ,
-        gtk       >= 0.13.0 && < 0.14,
+        gtk3      >= 0.14.0 && < 0.15,
         managed   >= 1.0.0  && < 1.1 ,
         microlens              < 0.4 ,
         stm                    < 2.5 ,
