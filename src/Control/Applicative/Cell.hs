@@ -1,25 +1,22 @@
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-{-# LANGUAGE OverloadedStrings         #-}
--- TODO: Remove this
-
 module Control.Applicative.Cell (
       Cell
     , Control
+    , bool
     , int
     , double
     , text
     , setup
     , runManaged
+    , display
     ) where
 
-import Control.Applicative (Applicative(..), Alternative(..), liftA2)
+import Control.Applicative
 import Control.Concurrent.STM (STM)
 import Control.Foldl (Fold(..))
 import Control.Monad.Managed (Managed, liftIO, managed, runManaged)
-import Data.String (IsString)
-import Data.Monoid ((<>))
 import Data.Text (Text)
 import Lens.Micro (_Left, _Right)
 import Graphics.UI.Gtk (AttrOp((:=)))
@@ -30,8 +27,6 @@ import qualified Control.Foldl            as Fold
 import qualified Control.Monad.Managed    as Managed
 import qualified Data.Text                as Text
 import qualified Graphics.UI.Gtk          as Gtk
-
-newtype Label = Label { getLabel :: Text } deriving (IsString)
 
 data Cell a = forall e . Cell (Managed (STM e, Fold e a))
 
@@ -51,7 +46,6 @@ instance Applicative Cell where
 
 data Control = Control
     { _bool   :: Text -> Cell Bool
-    , _int    :: Text -> Cell Int
     , _double :: Text -> Double -> Cell Double
     , _text   :: Text -> Cell Text
     }
@@ -71,7 +65,7 @@ int
     -> Text
     -- ^ Label
     -> Cell Int
-int = _int
+int control label = fmap truncate (double control label 1)
 
 -- | A `Double` control
 double
@@ -107,7 +101,7 @@ setup = managed (\k -> do
     Gtk.set textView
         [ Gtk.textViewEditable      := False
         , Gtk.textViewCursorVisible := False
-        , Gtk.textViewLeftMargin    := 5
+--      , Gtk.textViewLeftMargin    := 5
         ]
 
     hAdjust <- Gtk.textViewGetHadjustment textView
@@ -125,25 +119,22 @@ setup = managed (\k -> do
     Gtk.boxPackStart hBox scrolledWindow Gtk.PackGrow    0
 
     Gtk.set window
-        [ Gtk.windowTitle         := ("Haskell Playground" :: Text)
+        [ Gtk.windowTitle         := "Haskell Playground"
         , Gtk.containerChild      := hBox
         , Gtk.windowDefaultWidth  := 600
         , Gtk.windowDefaultHeight := 400
         ]
 
     let __double :: Text -> Double -> Cell Double
-        __double label stepX = Cell (liftIO (do
+        __double label stepX = Cell (liftIO (Gtk.postGUISync (do
             tmvar      <- STM.newEmptyTMVarIO
             let minX = fromIntegral (minBound :: Int)
             let maxX = fromIntegral (maxBound :: Int)
             spinButton <- Gtk.spinButtonNewWithRange minX maxX stepX
             Gtk.set spinButton
-                [ Gtk.widgetMarginLeft   := 1
-                , Gtk.widgetMarginRight  := 1
-                , Gtk.widgetMarginBottom := 1
-                , Gtk.spinButtonValue    := 0
+                [ Gtk.spinButtonValue    := 0
                 ]
-            _          <- Gtk.onValueSpinned spinButton (do
+            _  <- Gtk.onValueSpinned spinButton (do
                 n <- Gtk.get spinButton Gtk.spinButtonValue
                 STM.atomically (STM.putTMVar tmvar n) )
 
@@ -155,10 +146,10 @@ setup = managed (\k -> do
 
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll vBox
-            return (STM.takeTMVar tmvar, Fold.lastDef 0) ))
+            return (STM.takeTMVar tmvar, Fold.lastDef 0) )))
 
     let __bool :: Text -> Cell Bool
-        __bool label = Cell (liftIO (do
+        __bool label = Cell (liftIO (Gtk.postGUISync (do
             checkButton <- Gtk.checkButtonNewWithLabel label
 
             tmvar <- STM.newEmptyTMVarIO
@@ -168,19 +159,11 @@ setup = managed (\k -> do
 
             Gtk.boxPackStart vBox checkButton Gtk.PackNatural 0
             Gtk.widgetShowAll vBox
-            return (STM.takeTMVar tmvar, Fold.lastDef False) ))
-
-    let __int :: Text -> Cell Int
-        __int label = fmap truncate (__double label 1)
+            return (STM.takeTMVar tmvar, Fold.lastDef False) )))
 
     let __text :: Text -> Cell Text
-        __text label = Cell (liftIO (do
+        __text label = Cell (liftIO (Gtk.postGUISync (do
             entry <- Gtk.entryNew
-            Gtk.set entry
-                [ Gtk.widgetMarginLeft   := 1
-                , Gtk.widgetMarginRight  := 1
-                , Gtk.widgetMarginBottom := 1
-                ]
 
             frame <- Gtk.frameNew
             Gtk.set frame
@@ -195,11 +178,10 @@ setup = managed (\k -> do
 
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll frame
-            return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) ))
+            return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) )))
 
     let controls = Control
             { _bool    = __bool
-            , _int     = __int
             , _double  = __double
             , _text    = __text
             }
@@ -227,18 +209,11 @@ setup = managed (\k -> do
         STM.atomically (STM.putTMVar doneTMVar ())
         Gtk.mainQuit
         return False ))
+    Gtk.widgetShowAll window
     Async.withAsync (k (controls, run)) (\a -> do
-        Gtk.widgetShowAll window
         Gtk.mainGUI
         Async.wait a ) )
 
--- TODO: Remove this
-main = runManaged (do
-    (control, run) <- setup
-
-    let f x y = Text.pack (show x) <> " " <> y
-
-    let result = f <$> bool control "Pressed"
-                   <*> text control "Noun"
-
-    run result )
+-- | Convert a `Show`able value to `Text`
+display :: Show a => a -> Text
+display = Text.pack . show
