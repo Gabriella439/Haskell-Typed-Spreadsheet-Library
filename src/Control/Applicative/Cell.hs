@@ -158,7 +158,7 @@ setup = managed (\k -> do
     Gtk.boxPackStart hBox scrolledWindow Gtk.PackGrow    0
 
     Gtk.set window
-        [ Gtk.windowTitle         := "Haskell Playground"
+        [ Gtk.windowTitle         := "Haskell Spreadsheet"
         , Gtk.containerChild      := hBox
         , Gtk.windowDefaultWidth  := 600
         , Gtk.windowDefaultHeight := 400
