@@ -20,14 +20,21 @@
 -- >     run result )
 
 module Control.Applicative.Cell (
+    -- * Types
       Cell
     , Control
+
+    -- * Controls
     , bool
     , int
     , double
     , text
+
+    -- * Setup
     , setup
     , runManaged
+
+    -- * Utilities
     , display
     ) where
 
@@ -45,6 +52,7 @@ import qualified Control.Foldl            as Fold
 import qualified Data.Text                as Text
 import qualified Graphics.UI.Gtk          as Gtk
 
+-- | An updatable value
 data Cell a = forall e . Cell (IO (STM e, Fold e a))
 
 instance Functor Cell where
@@ -61,6 +69,9 @@ instance Applicative Cell where
 
             fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
 
+{-| Use a `Control` to obtain updatable `bool`, `double` or `text` input
+    `Cell`s
+-}
 data Control = Control
     { _bool   :: Text -> Cell Bool
     , _double :: Text -> Double -> Cell Double
@@ -104,6 +115,12 @@ text
     -> Cell Text
 text = _text
 
+{-| Acquire two values:
+
+    * The first value is a `Control`, which you can use to create `Cell`s
+    * The second value is a function which builds a spreadsheet from a
+      @(`Cell` `Text`)@
+-}
 setup :: Managed (Control, Cell Text -> Managed ())
 setup = managed (\k -> do
     _ <- Gtk.initGUI
