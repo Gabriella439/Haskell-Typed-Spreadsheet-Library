@@ -12,11 +12,12 @@
 -- > main = runManaged (do
 -- >     (control, run) <- setup
 -- > 
--- >     let combine x y z = display (x, y, z)
+-- >     let combine a b c d = display (a, b + c, d)
 -- >     
--- >     let result = combine <$> bool control "Bool"
--- >                          <*> int  control "Int"
--- >                          <*> text control "Text"
+-- >     let result = combine <$> checkBox   control "a"
+-- >                          <*> spinButton control "b" 1
+-- >                          <*> spinButton control "c" 0.1
+-- >                          <*> entry      control "d"
 -- >     
 -- >     run result )
 
@@ -26,11 +27,10 @@ module Control.Applicative.Cell (
     , Control
 
     -- * Controls
-    , bool
-    , int
-    , double
-    , text
-    , enum
+    , checkBox
+    , spinButton
+    , entry
+    , radioButton
 
     -- * Setup
     , setup
@@ -71,35 +71,24 @@ instance Applicative Cell where
 
             fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
 
-{-| Use a `Control` to obtain updatable `bool`, `double` or `text` input
-    `Cell`s
--}
+-- | Use a `Control` to obtain updatable input `Cell`s
 data Control = Control
-    { _bool   :: Text -> Cell Bool
-    , _double :: Text -> Double -> Cell Double
-    , _text   :: Text -> Cell Text
-    , _enum   :: forall a . Show a => Text -> a -> [a] -> Cell a
+    { _checkBox    :: Text -> Cell Bool
+    , _spinButton  :: Text -> Double -> Cell Double
+    , _entry       :: Text -> Cell Text
+    , _radioButton :: forall a . Show a => Text -> a -> [a] -> Cell a
     }
 
--- | A `Bool` control
-bool
+-- | A check box that returns `True` if selected and `False` if unselected
+checkBox
     :: Control
     -> Text
     -- ^ Label
     -> Cell Bool
-bool = _bool
+checkBox = _checkBox
 
--- | An `Int` control
-int
-    :: Control
-    -- ^
-    -> Text
-    -- ^ Label
-    -> Cell Int
-int control label = fmap truncate (double control label 1)
-
--- | A `Double` control
-double
+-- | A `Double` spin button
+spinButton
     :: Control
     -- ^
     -> Text
@@ -107,19 +96,19 @@ double
     -> Double
     -- ^ Step size
     -> Cell Double
-double = _double
+spinButton = _spinButton
 
--- | A `Text` control
-text
+-- | A `Text` entry
+entry
     :: Control
     -- ^
     -> Text
     -- ^ Label
     -> Cell Text
-text = _text
+entry = _entry
 
--- | A control that selects from a list of values
-enum
+-- | A control that selects from one or more mutually exclusive values
+radioButton
     :: Show a
     => Control
     -- ^
@@ -130,7 +119,7 @@ enum
     -> [a]
     -- ^ Remaining values
     -> Cell a
-enum = _enum
+radioButton = _radioButton
 
 {-| Acquire two values:
 
@@ -175,22 +164,22 @@ setup = managed (\k -> do
         , Gtk.windowDefaultHeight := 400
         ]
 
-    let __double :: Text -> Double -> Cell Double
-        __double label stepX = Cell (do
+    let __spinButton :: Text -> Double -> Cell Double
+        __spinButton label stepX = Cell (do
             tmvar      <- STM.newEmptyTMVarIO
             let minX = fromIntegral (minBound :: Int)
             let maxX = fromIntegral (maxBound :: Int)
-            spinButton <- Gtk.spinButtonNewWithRange minX maxX stepX
-            Gtk.set spinButton
+            spinButton_ <- Gtk.spinButtonNewWithRange minX maxX stepX
+            Gtk.set spinButton_
                 [ Gtk.spinButtonValue    := 0
                 ]
-            _  <- Gtk.onValueSpinned spinButton (do
-                n <- Gtk.get spinButton Gtk.spinButtonValue
+            _  <- Gtk.onValueSpinned spinButton_ (do
+                n <- Gtk.get spinButton_ Gtk.spinButtonValue
                 STM.atomically (STM.putTMVar tmvar n) )
 
             frame <- Gtk.frameNew
             Gtk.set frame
-                [ Gtk.containerChild := spinButton
+                [ Gtk.containerChild := spinButton_
                 , Gtk.frameLabel     := label
                 ]
 
@@ -198,8 +187,8 @@ setup = managed (\k -> do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef 0) )
 
-    let __bool :: Text -> Cell Bool
-        __bool label = Cell (do
+    let __checkBox :: Text -> Cell Bool
+        __checkBox label = Cell (do
             checkButton <- Gtk.checkButtonNewWithLabel label
 
             tmvar <- STM.newEmptyTMVarIO
@@ -211,27 +200,27 @@ setup = managed (\k -> do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef False) )
 
-    let __text :: Text -> Cell Text
-        __text label = Cell (do
-            entry <- Gtk.entryNew
+    let __entry :: Text -> Cell Text
+        __entry label = Cell (do
+            entry_ <- Gtk.entryNew
 
             frame <- Gtk.frameNew
             Gtk.set frame
-                [ Gtk.containerChild := entry
+                [ Gtk.containerChild := entry_
                 , Gtk.frameLabel     := label
                 ]
 
             tmvar <- STM.newEmptyTMVarIO
-            _     <- Gtk.on entry Gtk.editableChanged (do
-                txt <- Gtk.get entry Gtk.entryText
+            _     <- Gtk.on entry_ Gtk.editableChanged (do
+                txt <- Gtk.get entry_ Gtk.entryText
                 STM.atomically (STM.putTMVar tmvar txt) )
 
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll frame
             return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) )
 
-    let __enum :: Show a => Text -> a -> [a] -> Cell a
-        __enum label x xs = Cell (do
+    let __radioButton :: Show a => Text -> a -> [a] -> Cell a
+        __radioButton label x xs = Cell (do
             tmvar <- STM.newEmptyTMVarIO
 
             vBoxRadio <- Gtk.vBoxNew False 5
@@ -259,10 +248,10 @@ setup = managed (\k -> do
             return (STM.takeTMVar tmvar, Fold.lastDef x) )
 
     let controls = Control
-            { _bool    = __bool
-            , _double  = __double
-            , _text    = __text
-            , _enum    = __enum
+            { _checkBox    = __checkBox
+            , _spinButton  = __spinButton
+            , _entry       = __entry
+            , _radioButton = __radioButton
             }
 
     doneTMVar <- STM.newEmptyTMVarIO

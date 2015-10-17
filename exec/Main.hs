@@ -6,10 +6,11 @@ main :: IO ()
 main = runManaged (do
     (control, run) <- setup
 
-    let f x y z = display (x, y, z)
-
-    let result = f <$> bool control "Bool"
-                   <*> int  control "Int"
-                   <*> enum control "Enum" "Hey" ["Diddle", "Doo"]
-
+    let combine a b c d = display (a, b + c, d)
+    
+    let result = combine <$> checkBox   control "a"
+                         <*> spinButton control "b" 1
+                         <*> spinButton control "c" 0.1
+                         <*> entry      control "d"
+    
     run result )
