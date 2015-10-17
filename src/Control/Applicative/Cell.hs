@@ -24,11 +24,10 @@ import Graphics.UI.Gtk (AttrOp((:=)))
 import qualified Control.Concurrent.STM   as STM
 import qualified Control.Concurrent.Async as Async
 import qualified Control.Foldl            as Fold
-import qualified Control.Monad.Managed    as Managed
 import qualified Data.Text                as Text
 import qualified Graphics.UI.Gtk          as Gtk
 
-data Cell a = forall e . Cell (Managed (STM e, Fold e a))
+data Cell a = forall e . Cell (IO (STM e, Fold e a))
 
 instance Functor Cell where
     fmap f (Cell m) = Cell (fmap (fmap (fmap f)) m)
@@ -126,7 +125,7 @@ setup = managed (\k -> do
         ]
 
     let __double :: Text -> Double -> Cell Double
-        __double label stepX = Cell (liftIO (Gtk.postGUISync (do
+        __double label stepX = Cell (do
             tmvar      <- STM.newEmptyTMVarIO
             let minX = fromIntegral (minBound :: Int)
             let maxX = fromIntegral (maxBound :: Int)
@@ -146,10 +145,10 @@ setup = managed (\k -> do
 
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll vBox
-            return (STM.takeTMVar tmvar, Fold.lastDef 0) )))
+            return (STM.takeTMVar tmvar, Fold.lastDef 0) )
 
     let __bool :: Text -> Cell Bool
-        __bool label = Cell (liftIO (Gtk.postGUISync (do
+        __bool label = Cell (do
             checkButton <- Gtk.checkButtonNewWithLabel label
 
             tmvar <- STM.newEmptyTMVarIO
@@ -159,10 +158,10 @@ setup = managed (\k -> do
 
             Gtk.boxPackStart vBox checkButton Gtk.PackNatural 0
             Gtk.widgetShowAll vBox
-            return (STM.takeTMVar tmvar, Fold.lastDef False) )))
+            return (STM.takeTMVar tmvar, Fold.lastDef False) )
 
     let __text :: Text -> Cell Text
-        __text label = Cell (liftIO (Gtk.postGUISync (do
+        __text label = Cell (do
             entry <- Gtk.entryNew
 
             frame <- Gtk.frameNew
@@ -178,7 +177,7 @@ setup = managed (\k -> do
 
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll frame
-            return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) )))
+            return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) )
 
     let controls = Control
             { _bool    = __bool
@@ -188,29 +187,28 @@ setup = managed (\k -> do
 
     doneTMVar <- STM.newEmptyTMVarIO
 
-    let run :: Cell Text -> Managed ()
+    let run :: Cell Text -> IO ()
         run (Cell m) = do
-            (stm, Fold step begin done) <- m
-            Managed.liftIO (do
-                let loop x = do
-                        let txt = done x
-                        Gtk.postGUISync
-                            (Gtk.set textBuffer [ Gtk.textBufferText := txt ])
-                        let doneTransaction = do
-                                STM.takeTMVar doneTMVar
-                                return Nothing
-                        me <- STM.atomically (doneTransaction <|> fmap pure stm)
-                        case me of
-                            Nothing -> return ()
-                            Just e  -> loop (step x e)
-                loop begin )
+            (stm, Fold step begin done) <- Gtk.postGUISync m
+            let loop x = do
+                    let txt = done x
+                    Gtk.postGUISync
+                        (Gtk.set textBuffer [ Gtk.textBufferText := txt ])
+                    let doneTransaction = do
+                            STM.takeTMVar doneTMVar
+                            return Nothing
+                    me <- STM.atomically (doneTransaction <|> fmap pure stm)
+                    case me of
+                        Nothing -> return ()
+                        Just e  -> loop (step x e)
+            loop begin
 
     _ <- Gtk.on window Gtk.deleteEvent (liftIO (do
         STM.atomically (STM.putTMVar doneTMVar ())
         Gtk.mainQuit
         return False ))
     Gtk.widgetShowAll window
-    Async.withAsync (k (controls, run)) (\a -> do
+    Async.withAsync (k (controls, liftIO . run)) (\a -> do
         Gtk.mainGUI
         Async.wait a ) )
 
