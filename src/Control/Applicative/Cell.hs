@@ -1,6 +1,24 @@
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
+-- | Example usage:
+--
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- > 
+-- > import Control.Applicative.Cell
+-- > 
+-- > main :: IO ()
+-- > main = runManaged (do
+-- >     (control, run) <- setup
+-- > 
+-- >     let combine x y z = display (x, y, z)
+-- >     
+-- >     let result = combine <$> bool control "Bool"
+-- >                          <*> int  control "Int"
+-- >                          <*> text control "Text"
+-- >     
+-- >     run result )
+
 module Control.Applicative.Cell (
       Cell
     , Control
