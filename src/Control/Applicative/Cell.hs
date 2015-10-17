@@ -1,6 +1,5 @@
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- | Example usage:
 --
