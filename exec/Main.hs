@@ -10,7 +10,6 @@ main = runManaged (do
 
     let result = f <$> bool control "Bool"
                    <*> int  control "Int"
-                   <*> text control "Text"
+                   <*> enum control "Enum" "Hey" ["Diddle", "Doo"]
 
     run result )
-

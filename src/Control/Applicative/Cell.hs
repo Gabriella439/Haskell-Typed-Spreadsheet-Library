@@ -1,4 +1,5 @@
 {-# LANGUAGE ExistentialQuantification  #-}
+{-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- | Example usage:
@@ -29,6 +30,7 @@ module Control.Applicative.Cell (
     , int
     , double
     , text
+    , enum
 
     -- * Setup
     , setup
@@ -76,6 +78,7 @@ data Control = Control
     { _bool   :: Text -> Cell Bool
     , _double :: Text -> Double -> Cell Double
     , _text   :: Text -> Cell Text
+    , _enum   :: forall a . Show a => Text -> a -> [a] -> Cell a
     }
 
 -- | A `Bool` control
@@ -115,6 +118,20 @@ text
     -> Cell Text
 text = _text
 
+-- | A control that selects from a list of values
+enum
+    :: Show a
+    => Control
+    -- ^
+    -> Text
+    -- ^ Label
+    -> a
+    -- ^ 1st value (Default selection)
+    -> [a]
+    -- ^ Remaining values
+    -> Cell a
+enum = _enum
+
 {-| Acquire two values:
 
     * The first value is a `Control`, which you can use to create `Cell`s
@@ -135,7 +152,6 @@ setup = managed (\k -> do
     Gtk.set textView
         [ Gtk.textViewEditable      := False
         , Gtk.textViewCursorVisible := False
---      , Gtk.textViewLeftMargin    := 5
         ]
 
     hAdjust <- Gtk.textViewGetHadjustment textView
@@ -214,10 +230,39 @@ setup = managed (\k -> do
             Gtk.widgetShowAll frame
             return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) )
 
+    let __enum :: Show a => Text -> a -> [a] -> Cell a
+        __enum label x xs = Cell (do
+            tmvar <- STM.newEmptyTMVarIO
+
+            vBoxRadio <- Gtk.vBoxNew False 5
+
+            let makeButton f a = do
+                    button <- f (show a)
+                    Gtk.boxPackStart vBoxRadio button Gtk.PackNatural 0
+                    _ <- Gtk.on button Gtk.toggled (do
+                        mode <- Gtk.get button Gtk.toggleButtonMode
+                        if mode
+                            then STM.atomically (STM.putTMVar tmvar a)
+                            else return () )
+                    return button
+
+            button <- makeButton Gtk.radioButtonNewWithLabel x
+            mapM_ (makeButton (Gtk.radioButtonNewWithLabelFromWidget button)) xs
+
+            frame <- Gtk.frameNew
+            Gtk.set frame
+                [ Gtk.containerChild := vBoxRadio
+                , Gtk.frameLabel     := label
+                ]
+            Gtk.boxPackStart vBox frame Gtk.PackNatural 0
+            Gtk.widgetShowAll frame
+            return (STM.takeTMVar tmvar, Fold.lastDef x) )
+
     let controls = Control
             { _bool    = __bool
             , _double  = __double
             , _text    = __text
+            , _enum    = __enum
             }
 
     doneTMVar <- STM.newEmptyTMVarIO
