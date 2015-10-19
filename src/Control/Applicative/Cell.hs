@@ -36,6 +36,7 @@ import Control.Applicative
 import Control.Concurrent.STM (STM)
 import Control.Foldl (Fold(..))
 import Control.Monad.IO.Class (liftIO)
+import Data.String (IsString(..))
 import Data.Text (Text)
 import Lens.Micro (_Left, _Right)
 import Graphics.UI.Gtk (AttrOp((:=)))
@@ -62,6 +63,54 @@ instance Applicative Cell where
             input = fmap Left inputF <|> fmap Right inputX
 
             fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
+
+instance Monoid a => Monoid (Cell a) where
+    mempty = pure mempty
+
+    mappend = liftA2 mappend
+
+instance IsString a => IsString (Cell a) where
+    fromString str = pure (fromString str)
+
+instance Num a => Num (Cell a) where
+    fromInteger = pure . fromInteger
+
+    negate = fmap negate
+    abs    = fmap abs
+    signum = fmap signum
+
+    (+) = liftA2 (+)
+    (*) = liftA2 (*)
+    (-) = liftA2 (-)
+
+instance Fractional a => Fractional (Cell a) where
+    fromRational = pure . fromRational
+
+    recip = fmap recip
+
+    (/) = liftA2 (/)
+
+instance Floating a => Floating (Cell a) where
+    pi = pure pi
+
+    exp   = fmap exp
+    sqrt  = fmap sqrt
+    log   = fmap log
+    sin   = fmap sin
+    tan   = fmap tan
+    cos   = fmap cos
+    asin  = fmap sin
+    atan  = fmap atan
+    acos  = fmap acos
+    sinh  = fmap sinh
+    tanh  = fmap tanh
+    cosh  = fmap cosh
+    asinh = fmap asinh
+    atanh = fmap atanh
+    acosh = fmap acosh
+
+    (**)    = liftA2 (**)
+    logBase = liftA2 logBase
 
 -- | Use a `Control` to obtain updatable input `Cell`s
 data Control = Control
