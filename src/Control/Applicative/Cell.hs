@@ -8,32 +8,25 @@
 -- > import Control.Applicative.Cell
 -- > 
 -- > main :: IO ()
--- > main = runManaged (do
--- >     (control, run) <- setup
--- > 
+-- > main = textUI (\control ->
 -- >     let combine a b c d = display (a, b + c, d)
--- >     
--- >     let result = combine <$> checkBox   control "a"
--- >                          <*> spinButton control "b" 1
--- >                          <*> spinButton control "c" 0.1
--- >                          <*> entry      control "d"
--- >     
--- >     run result )
+-- > 
+-- >     in combine <$> checkBox   control "a"
+-- >                <*> spinButton control "b" 1
+-- >                <*> spinButton control "c" 0.1
+-- >                <*> entry      control "d" )
 
 module Control.Applicative.Cell (
     -- * Types
       Cell
     , Control
+    , textUI
 
     -- * Controls
     , checkBox
     , spinButton
     , entry
     , radioButton
-
-    -- * Setup
-    , setup
-    , runManaged
 
     -- * Utilities
     , display
@@ -42,7 +35,7 @@ module Control.Applicative.Cell (
 import Control.Applicative
 import Control.Concurrent.STM (STM)
 import Control.Foldl (Fold(..))
-import Control.Monad.Managed (Managed, liftIO, managed, runManaged)
+import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text)
 import Lens.Micro (_Left, _Right)
 import Graphics.UI.Gtk (AttrOp((:=)))
@@ -53,7 +46,7 @@ import qualified Control.Foldl            as Fold
 import qualified Data.Text                as Text
 import qualified Graphics.UI.Gtk          as Gtk
 
--- | An updatable value
+-- | An updatable input value
 data Cell a = forall e . Cell (IO (STM e, Fold e a))
 
 instance Functor Cell where
@@ -78,56 +71,9 @@ data Control = Control
     , _radioButton :: forall a . Show a => Text -> a -> [a] -> Cell a
     }
 
--- | A check box that returns `True` if selected and `False` if unselected
-checkBox
-    :: Control
-    -> Text
-    -- ^ Label
-    -> Cell Bool
-checkBox = _checkBox
-
--- | A `Double` spin button
-spinButton
-    :: Control
-    -- ^
-    -> Text
-    -- ^ Label
-    -> Double
-    -- ^ Step size
-    -> Cell Double
-spinButton = _spinButton
-
--- | A `Text` entry
-entry
-    :: Control
-    -- ^
-    -> Text
-    -- ^ Label
-    -> Cell Text
-entry = _entry
-
--- | A control that selects from one or more mutually exclusive values
-radioButton
-    :: Show a
-    => Control
-    -- ^
-    -> Text
-    -- ^ Label
-    -> a
-    -- ^ 1st value (Default selection)
-    -> [a]
-    -- ^ Remaining values
-    -> Cell a
-radioButton = _radioButton
-
-{-| Acquire two values:
-
-    * The first value is a `Control`, which you can use to create `Cell`s
-    * The second value is a function which builds a spreadsheet from a
-      @(`Cell` `Text`)@
--}
-setup :: Managed (Control, Cell Text -> Managed ())
-setup = managed (\k -> do
+-- | Build a `Text`-based user interface
+textUI :: (Control -> Cell Text) -> IO ()
+textUI k = do
     _ <- Gtk.initGUI
 
     window <- Gtk.windowNew
@@ -246,7 +192,7 @@ setup = managed (\k -> do
             Gtk.widgetShowAll frame
             return (STM.takeTMVar tmvar, Fold.lastDef x) )
 
-    let controls = Control
+    let control = Control
             { _checkBox    = __checkBox
             , _spinButton  = __spinButton
             , _entry       = __entry
@@ -276,9 +222,51 @@ setup = managed (\k -> do
         Gtk.mainQuit
         return False ))
     Gtk.widgetShowAll window
-    Async.withAsync (k (controls, liftIO . run)) (\a -> do
+    Async.withAsync (run (k control)) (\a -> do
         Gtk.mainGUI
-        Async.wait a ) )
+        Async.wait a )
+
+-- | A check box that returns `True` if selected and `False` if unselected
+checkBox
+    :: Control
+    -> Text
+    -- ^ Label
+    -> Cell Bool
+checkBox = _checkBox
+
+-- | A `Double` spin button
+spinButton
+    :: Control
+    -- ^
+    -> Text
+    -- ^ Label
+    -> Double
+    -- ^ Step size
+    -> Cell Double
+spinButton = _spinButton
+
+-- | A `Text` entry
+entry
+    :: Control
+    -- ^
+    -> Text
+    -- ^ Label
+    -> Cell Text
+entry = _entry
+
+-- | A control that selects from one or more mutually exclusive values
+radioButton
+    :: Show a
+    => Control
+    -- ^
+    -> Text
+    -- ^ Label
+    -> a
+    -- ^ 1st value (Default selection)
+    -> [a]
+    -- ^ Remaining values
+    -> Cell a
+radioButton = _radioButton
 
 -- | Convert a `Show`able value to `Text`
 display :: Show a => a -> Text
