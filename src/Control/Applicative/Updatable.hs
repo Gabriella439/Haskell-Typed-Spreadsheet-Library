@@ -29,10 +29,15 @@
 -- The general workflow for this library is:
 --
 -- * You build primitive `Updatable` values using `checkBox`, `spinButton`,
---   `entry`, or `radioButton`
+--   `entry`, or `radioButton`, each of which corresponds to a control on the
+--   left panel of the user interface
 -- * You transform or combine `Updatable` values using `Functor` and
---   `Applicative` operations
--- * You consume `Updatable` values using `textUI`
+--   `Applicative` operations.  Composite values update whenever one of their
+--   substituent values update
+-- * You consume an @(`Updatable` `Text`)@ value using `textUI`, which displays
+--   the continuously updating value in the right panel of the user interface
+--
+-- NOTE: You must compile your program with the @-threaded@ flag
 
 module Control.Applicative.Updatable (
     -- * Types
