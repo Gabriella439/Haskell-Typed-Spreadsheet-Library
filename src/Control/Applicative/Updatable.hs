@@ -1,25 +1,42 @@
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE RankNTypes                 #-}
 
--- | Example usage:
+-- | The following program:
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
 -- > import Control.Applicative.Updatable
 -- > 
 -- > main :: IO ()
--- > main = textUI "Example program" (\control ->
--- >     let combine a b c d = display (a, b + c, d)
+-- > main = textUI "Example program" logic
+-- >   where
+-- >     logic = combine <$> checkBox   "a"
+-- >                     <*> spinButton "b" 1
+-- >                     <*> spinButton "c" 0.1
+-- >                     <*> entry      "d"
 -- > 
--- >     in combine <$> checkBox   control "a"
--- >                <*> spinButton control "b" 1
--- >                <*> spinButton control "c" 0.1
--- >                <*> entry      control "d" )
+-- >     combine a b c d = display (a, b + c, d)
+--
+-- ... creates a user interface that looks like this:
+--
+-- <<http://i.imgur.com/xPifEtA.png User interface on startup>>
+--
+-- Every time you update a control on the left panel, the right panel updates
+-- in response:
+--
+-- <<http://i.imgur.com/TTxgSwN.png User interface after user input>>
+--
+-- The general workflow for this library is:
+--
+-- * You build primitive `Updatable` values using `checkBox`, `spinButton`,
+--   `entry`, or `radioButton`
+-- * You transform or combine `Updatable` values using `Functor` and
+--   `Applicative` operations
+-- * You consume `Updatable` values using `textUI`
 
 module Control.Applicative.Updatable (
     -- * Types
       Updatable
-    , Control
     , textUI
 
     -- * Controls
@@ -47,22 +64,80 @@ import qualified Control.Foldl            as Fold
 import qualified Data.Text                as Text
 import qualified Graphics.UI.Gtk          as Gtk
 
--- | An updatable input value
-data Updatable a = forall e . Updatable (IO (STM e, Fold e a))
+data Cell a = forall e . Cell (IO (STM e, Fold e a))
 
-instance Functor Updatable where
-    fmap f (Updatable m) = Updatable (fmap (fmap (fmap f)) m)
+instance Functor Cell where
+    fmap f (Cell m) = Cell (fmap (fmap (fmap f)) m)
 
-instance Applicative Updatable where
-    pure a = Updatable (pure (empty, pure a))
+instance Applicative Cell where
+    pure a = Cell (pure (empty, pure a))
 
-    Updatable mF <*> Updatable mX = Updatable (liftA2 helper mF mX)
+    Cell mF <*> Cell mX = Cell (liftA2 helper mF mX)
       where
         helper (inputF, foldF) (inputX, foldX) = (input, fold )
           where
             input = fmap Left inputF <|> fmap Right inputX
 
             fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
+
+instance Monoid a => Monoid (Cell a) where
+    mempty = pure mempty
+
+    mappend = liftA2 mappend
+
+instance IsString a => IsString (Cell a) where
+    fromString str = pure (fromString str)
+
+instance Num a => Num (Cell a) where
+    fromInteger = pure . fromInteger
+
+    negate = fmap negate
+    abs    = fmap abs
+    signum = fmap signum
+
+    (+) = liftA2 (+)
+    (*) = liftA2 (*)
+    (-) = liftA2 (-)
+
+instance Fractional a => Fractional (Cell a) where
+    fromRational = pure . fromRational
+
+    recip = fmap recip
+
+    (/) = liftA2 (/)
+
+instance Floating a => Floating (Cell a) where
+    pi = pure pi
+
+    exp   = fmap exp
+    sqrt  = fmap sqrt
+    log   = fmap log
+    sin   = fmap sin
+    tan   = fmap tan
+    cos   = fmap cos
+    asin  = fmap sin
+    atan  = fmap atan
+    acos  = fmap acos
+    sinh  = fmap sinh
+    tanh  = fmap tanh
+    cosh  = fmap cosh
+    asinh = fmap asinh
+    atanh = fmap atanh
+    acosh = fmap acosh
+
+    (**)    = liftA2 (**)
+    logBase = liftA2 logBase
+
+-- | An updatable input value
+data Updatable a = Updatable (Control -> Cell a)
+
+instance Functor Updatable where
+    fmap f (Updatable m) = Updatable (fmap (fmap f) m)
+
+instance Applicative Updatable where
+    pure a = Updatable (pure (pure a))
+
+    Updatable mf <*> Updatable mx = Updatable (liftA2 (<*>) mf mx)
 
 instance Monoid a => Monoid (Updatable a) where
     mempty = pure mempty
@@ -114,20 +189,20 @@ instance Floating a => Floating (Updatable a) where
 
 -- | Use a `Control` to obtain updatable input `Updatable`s
 data Control = Control
-    { _checkBox    :: Text -> Updatable Bool
-    , _spinButton  :: Text -> Double -> Updatable Double
-    , _entry       :: Text -> Updatable Text
-    , _radioButton :: forall a . Show a => Text -> a -> [a] -> Updatable a
+    { _checkBox    :: Text -> Cell Bool
+    , _spinButton  :: Text -> Double -> Cell Double
+    , _entry       :: Text -> Cell Text
+    , _radioButton :: forall a . Show a => Text -> a -> [a] -> Cell a
     }
 
 -- | Build a `Text`-based user interface
 textUI
     :: Text
     -- ^ Window title
-    -> (Control -> Updatable Text)
+    -> Updatable Text
     -- ^ Program logic
     -> IO ()
-textUI title k = do
+textUI title (Updatable k) = do
     _ <- Gtk.initGUI
 
     window <- Gtk.windowNew
@@ -163,8 +238,8 @@ textUI title k = do
         , Gtk.windowDefaultHeight := 400
         ]
 
-    let __spinButton :: Text -> Double -> Updatable Double
-        __spinButton label stepX = Updatable (do
+    let __spinButton :: Text -> Double -> Cell Double
+        __spinButton label stepX = Cell (do
             tmvar      <- STM.newEmptyTMVarIO
             let minX = fromIntegral (minBound :: Int)
             let maxX = fromIntegral (maxBound :: Int)
@@ -186,8 +261,8 @@ textUI title k = do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef 0) )
 
-    let __checkBox :: Text -> Updatable Bool
-        __checkBox label = Updatable (do
+    let __checkBox :: Text -> Cell Bool
+        __checkBox label = Cell (do
             checkButton <- Gtk.checkButtonNewWithLabel label
 
             tmvar <- STM.newEmptyTMVarIO
@@ -199,8 +274,8 @@ textUI title k = do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef False) )
 
-    let __entry :: Text -> Updatable Text
-        __entry label = Updatable (do
+    let __entry :: Text -> Cell Text
+        __entry label = Cell (do
             entry_ <- Gtk.entryNew
 
             frame <- Gtk.frameNew
@@ -218,8 +293,8 @@ textUI title k = do
             Gtk.widgetShowAll frame
             return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) )
 
-    let __radioButton :: Show a => Text -> a -> [a] -> Updatable a
-        __radioButton label x xs = Updatable (do
+    let __radioButton :: Show a => Text -> a -> [a] -> Cell a
+        __radioButton label x xs = Cell (do
             tmvar <- STM.newEmptyTMVarIO
 
             vBoxRadio <- Gtk.vBoxNew False 5
@@ -255,8 +330,8 @@ textUI title k = do
 
     doneTMVar <- STM.newEmptyTMVarIO
 
-    let run :: Updatable Text -> IO ()
-        run (Updatable m) = do
+    let run :: Cell Text -> IO ()
+        run (Cell m) = do
             (stm, Fold step begin done) <- Gtk.postGUISync m
             let loop x = do
                     let txt = done x
@@ -282,45 +357,39 @@ textUI title k = do
 
 -- | A check box that returns `True` if selected and `False` if unselected
 checkBox
-    :: Control
-    -> Text
+    :: Text
     -- ^ Label
     -> Updatable Bool
-checkBox = _checkBox
+checkBox label = Updatable (\control -> _checkBox control label)
 
 -- | A `Double` spin button
 spinButton
-    :: Control
-    -- ^
-    -> Text
+    :: Text
     -- ^ Label
     -> Double
     -- ^ Step size
     -> Updatable Double
-spinButton = _spinButton
+spinButton label x = Updatable (\control -> _spinButton control label x)
 
 -- | A `Text` entry
 entry
-    :: Control
-    -- ^
-    -> Text
+    :: Text
     -- ^ Label
     -> Updatable Text
-entry = _entry
+entry label = Updatable (\control -> _entry control label)
 
 -- | A control that selects from one or more mutually exclusive values
 radioButton
     :: Show a
-    => Control
-    -- ^
-    -> Text
+    => Text
     -- ^ Label
     -> a
     -- ^ 1st value (Default selection)
     -> [a]
     -- ^ Remaining values
     -> Updatable a
-radioButton = _radioButton
+radioButton label a0 as =
+    Updatable (\control -> _radioButton control label a0 as)
 
 -- | Convert a `Show`able value to `Text`
 display :: Show a => a -> Text
