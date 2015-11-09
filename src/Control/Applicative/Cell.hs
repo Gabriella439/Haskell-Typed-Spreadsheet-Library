@@ -8,7 +8,7 @@
 -- > import Control.Applicative.Cell
 -- > 
 -- > main :: IO ()
--- > main = textUI (\control ->
+-- > main = textUI "Example program" (\control ->
 -- >     let combine a b c d = display (a, b + c, d)
 -- > 
 -- >     in combine <$> checkBox   control "a"
@@ -121,8 +121,13 @@ data Control = Control
     }
 
 -- | Build a `Text`-based user interface
-textUI :: (Control -> Cell Text) -> IO ()
-textUI k = do
+textUI
+    :: Text
+    -- ^ Window title
+    -> (Control -> Cell Text)
+    -- ^ Program logic
+    -> IO ()
+textUI title k = do
     _ <- Gtk.initGUI
 
     window <- Gtk.windowNew
@@ -152,7 +157,7 @@ textUI k = do
     Gtk.boxPackStart hBox scrolledWindow Gtk.PackGrow    0
 
     Gtk.set window
-        [ Gtk.windowTitle         := "Haskell Spreadsheet"
+        [ Gtk.windowTitle         := title
         , Gtk.containerChild      := hBox
         , Gtk.windowDefaultWidth  := 600
         , Gtk.windowDefaultHeight := 400
