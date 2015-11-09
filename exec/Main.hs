@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Control.Applicative.Cell
+import Control.Applicative.Updatable
 
 main :: IO ()
 main = textUI "Example program" (\control ->

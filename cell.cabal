@@ -9,7 +9,7 @@ Author: Gabriel Gonzalez
 Maintainer: Gabriel439@gmail.com
 Bug-Reports: https://github.com/Gabriel439/Haskell-Cell-Library/issues
 Synopsis: Concurrent and combinable updates
-Description: Spreadsheet-like programming
+Description: Composable user interfaces
 Category: Control, Concurrency
 Source-Repository head
     Type: git
@@ -26,7 +26,7 @@ Library
         stm                        < 2.5,
         text                       < 1.3,
         transformers >= 0.2.0.0 && < 0.5
-    Exposed-Modules: Control.Applicative.Cell
+    Exposed-Modules: Control.Applicative.Updatable
     GHC-Options: -O2 -Wall
 
 Executable cell-example

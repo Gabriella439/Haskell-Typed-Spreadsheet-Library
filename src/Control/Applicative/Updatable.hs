@@ -5,7 +5,7 @@
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
--- > import Control.Applicative.Cell
+-- > import Control.Applicative.Updatable
 -- > 
 -- > main :: IO ()
 -- > main = textUI "Example program" (\control ->
@@ -16,9 +16,9 @@
 -- >                <*> spinButton control "c" 0.1
 -- >                <*> entry      control "d" )
 
-module Control.Applicative.Cell (
+module Control.Applicative.Updatable (
     -- * Types
-      Cell
+      Updatable
     , Control
     , textUI
 
@@ -48,15 +48,15 @@ import qualified Data.Text                as Text
 import qualified Graphics.UI.Gtk          as Gtk
 
 -- | An updatable input value
-data Cell a = forall e . Cell (IO (STM e, Fold e a))
+data Updatable a = forall e . Updatable (IO (STM e, Fold e a))
 
-instance Functor Cell where
-    fmap f (Cell m) = Cell (fmap (fmap (fmap f)) m)
+instance Functor Updatable where
+    fmap f (Updatable m) = Updatable (fmap (fmap (fmap f)) m)
 
-instance Applicative Cell where
-    pure a = Cell (pure (empty, pure a))
+instance Applicative Updatable where
+    pure a = Updatable (pure (empty, pure a))
 
-    Cell mF <*> Cell mX = Cell (liftA2 helper mF mX)
+    Updatable mF <*> Updatable mX = Updatable (liftA2 helper mF mX)
       where
         helper (inputF, foldF) (inputX, foldX) = (input, fold )
           where
@@ -64,15 +64,15 @@ instance Applicative Cell where
 
             fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
 
-instance Monoid a => Monoid (Cell a) where
+instance Monoid a => Monoid (Updatable a) where
     mempty = pure mempty
 
     mappend = liftA2 mappend
 
-instance IsString a => IsString (Cell a) where
+instance IsString a => IsString (Updatable a) where
     fromString str = pure (fromString str)
 
-instance Num a => Num (Cell a) where
+instance Num a => Num (Updatable a) where
     fromInteger = pure . fromInteger
 
     negate = fmap negate
@@ -83,14 +83,14 @@ instance Num a => Num (Cell a) where
     (*) = liftA2 (*)
     (-) = liftA2 (-)
 
-instance Fractional a => Fractional (Cell a) where
+instance Fractional a => Fractional (Updatable a) where
     fromRational = pure . fromRational
 
     recip = fmap recip
 
     (/) = liftA2 (/)
 
-instance Floating a => Floating (Cell a) where
+instance Floating a => Floating (Updatable a) where
     pi = pure pi
 
     exp   = fmap exp
@@ -112,19 +112,19 @@ instance Floating a => Floating (Cell a) where
     (**)    = liftA2 (**)
     logBase = liftA2 logBase
 
--- | Use a `Control` to obtain updatable input `Cell`s
+-- | Use a `Control` to obtain updatable input `Updatable`s
 data Control = Control
-    { _checkBox    :: Text -> Cell Bool
-    , _spinButton  :: Text -> Double -> Cell Double
-    , _entry       :: Text -> Cell Text
-    , _radioButton :: forall a . Show a => Text -> a -> [a] -> Cell a
+    { _checkBox    :: Text -> Updatable Bool
+    , _spinButton  :: Text -> Double -> Updatable Double
+    , _entry       :: Text -> Updatable Text
+    , _radioButton :: forall a . Show a => Text -> a -> [a] -> Updatable a
     }
 
 -- | Build a `Text`-based user interface
 textUI
     :: Text
     -- ^ Window title
-    -> (Control -> Cell Text)
+    -> (Control -> Updatable Text)
     -- ^ Program logic
     -> IO ()
 textUI title k = do
@@ -163,8 +163,8 @@ textUI title k = do
         , Gtk.windowDefaultHeight := 400
         ]
 
-    let __spinButton :: Text -> Double -> Cell Double
-        __spinButton label stepX = Cell (do
+    let __spinButton :: Text -> Double -> Updatable Double
+        __spinButton label stepX = Updatable (do
             tmvar      <- STM.newEmptyTMVarIO
             let minX = fromIntegral (minBound :: Int)
             let maxX = fromIntegral (maxBound :: Int)
@@ -186,8 +186,8 @@ textUI title k = do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef 0) )
 
-    let __checkBox :: Text -> Cell Bool
-        __checkBox label = Cell (do
+    let __checkBox :: Text -> Updatable Bool
+        __checkBox label = Updatable (do
             checkButton <- Gtk.checkButtonNewWithLabel label
 
             tmvar <- STM.newEmptyTMVarIO
@@ -199,8 +199,8 @@ textUI title k = do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Fold.lastDef False) )
 
-    let __entry :: Text -> Cell Text
-        __entry label = Cell (do
+    let __entry :: Text -> Updatable Text
+        __entry label = Updatable (do
             entry_ <- Gtk.entryNew
 
             frame <- Gtk.frameNew
@@ -218,8 +218,8 @@ textUI title k = do
             Gtk.widgetShowAll frame
             return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) )
 
-    let __radioButton :: Show a => Text -> a -> [a] -> Cell a
-        __radioButton label x xs = Cell (do
+    let __radioButton :: Show a => Text -> a -> [a] -> Updatable a
+        __radioButton label x xs = Updatable (do
             tmvar <- STM.newEmptyTMVarIO
 
             vBoxRadio <- Gtk.vBoxNew False 5
@@ -255,8 +255,8 @@ textUI title k = do
 
     doneTMVar <- STM.newEmptyTMVarIO
 
-    let run :: Cell Text -> IO ()
-        run (Cell m) = do
+    let run :: Updatable Text -> IO ()
+        run (Updatable m) = do
             (stm, Fold step begin done) <- Gtk.postGUISync m
             let loop x = do
                     let txt = done x
@@ -285,7 +285,7 @@ checkBox
     :: Control
     -> Text
     -- ^ Label
-    -> Cell Bool
+    -> Updatable Bool
 checkBox = _checkBox
 
 -- | A `Double` spin button
@@ -296,7 +296,7 @@ spinButton
     -- ^ Label
     -> Double
     -- ^ Step size
-    -> Cell Double
+    -> Updatable Double
 spinButton = _spinButton
 
 -- | A `Text` entry
@@ -305,7 +305,7 @@ entry
     -- ^
     -> Text
     -- ^ Label
-    -> Cell Text
+    -> Updatable Text
 entry = _entry
 
 -- | A control that selects from one or more mutually exclusive values
@@ -319,7 +319,7 @@ radioButton
     -- ^ 1st value (Default selection)
     -> [a]
     -- ^ Remaining values
-    -> Cell a
+    -> Updatable a
 radioButton = _radioButton
 
 -- | Convert a `Show`able value to `Text`
