@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Control.Applicative.Updatable
+import Gtk.Composer
 
 main :: IO ()
 main = textUI "Example program" logic
