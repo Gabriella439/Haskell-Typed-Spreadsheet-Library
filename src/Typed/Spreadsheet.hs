@@ -89,6 +89,7 @@ import Control.Applicative
 import Control.Concurrent.STM (STM)
 import Control.Foldl (Fold(..))
 import Control.Monad.IO.Class (liftIO)
+import Data.Monoid
 import Data.String (IsString(..))
 import Data.Text (Text)
 import Lens.Micro (_Left, _Right)
