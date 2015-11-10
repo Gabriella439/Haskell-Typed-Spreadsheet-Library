@@ -392,7 +392,7 @@ display = Text.pack . show
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
 -- > import Control.Applicative
--- > import Data.Monoid ((<>))
+-- > import Data.Monoid
 -- > import Data.Text (Text)
 -- > import Typed.Spreadsheet
 -- > 
@@ -420,7 +420,7 @@ display = Text.pack . show
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
--- > import Data.Monoid ((<>))
+-- > import Data.Monoid
 -- > import Typed.Spreadsheet
 -- > 
 -- > noun = entry "Noun"

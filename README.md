@@ -47,8 +47,66 @@ the output on the right-hand side:
 
 ![](http://i.imgur.com/TTxgSwN.png)
 
-To learn more about the library, including additional examples, read the
+To learn more about the library, read the
 [documentation on Hackage](http://hackage.haskell.org/package/typed-spreadsheet/docs/Typed-Spreadsheet.html).
+
+## Additional examples
+
+Mortgage calculator:
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+import Control.Applicative
+import Data.Monoid
+import Data.Text (Text)
+import Typed.Spreadsheet
+
+payment :: Double -> Double -> Double -> Text
+payment mortgageAmount numberOfYears yearlyInterestRate
+    =  "Monthly payment: $"
+    <> display (mortgageAmount * (i * (1 + i) ^ n) / ((1 + i) ^ n - 1))
+  where
+    n = truncate (numberOfYears * 12)
+    i = yearlyInterestRate / 12 / 100
+
+logic :: Updatable Text
+logic = payment <$> spinButton "Mortgage Amount"          1000
+                <*> spinButton "Number of years"             1
+                <*> spinButton "Yearly interest rate (%)"    0.01
+
+main :: IO ()
+main = textUI "Mortgage payment" logic
+```
+
+Example input and output:
+
+![](http://i.imgur.com/nvRZ9HC.png Mortgage calculator program)
+
+Mad libs:
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+import Data.Monoid
+import Typed.Spreadsheet
+
+noun = entry "Noun"
+
+verb = entry "Verb"
+
+adjective = entry "Adjective"
+
+example =
+    "I want to " <> verb <> " every " <> noun <> " because they are so " <> adjective
+
+main :: IO ()
+main = textUI "Mad libs" example
+```
+
+Example input and output:
+
+![](http://i.imgur.com/k22An4Y.png Mad libs program)
 
 ## How to contribute
 
