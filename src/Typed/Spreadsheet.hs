@@ -64,6 +64,8 @@
 --
 -- NOTE: You must compile your program with the @-threaded@ flag.  The example
 -- project takes care of this.
+--
+-- See the \"Examples\" section at the bottom of this module for more examples.
 
 module Typed.Spreadsheet (
     -- * Types
@@ -78,6 +80,9 @@ module Typed.Spreadsheet (
 
     -- * Utilities
     , display
+
+    -- * Examples
+    -- $examples
     ) where
 
 import Control.Applicative
@@ -377,3 +382,59 @@ radioButton label a0 as =
 -- | Convert a `Show`able value to `Text`
 display :: Show a => a -> Text
 display = Text.pack . show
+
+-- $examples
+--
+-- Mortgage calculator:
+--
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- > 
+-- > import Data.Text (Text)
+-- > import Typed.Spreadsheet
+-- > 
+-- > payment :: Double -> Double -> Double -> Text
+-- > payment mortgageAmount numberOfYears yearlyInterestRate
+-- >     = display (mortgageAmount * (i * (1 + i) ^ n) / ((1 + i) ^ n - 1))
+-- >   where
+-- >     n = truncate (numberOfYears * 12)
+-- >     i = yearlyInterestRate / 12 / 100
+-- > 
+-- > logic :: Updatable Text
+-- > logic = payment <$> spinButton "Mortgage Amount"          1000
+-- >                 <*> spinButton "Number of years"             1
+-- >                 <*> spinButton "Yearly interest rate (%)"    0.01
+-- > 
+-- > main :: IO ()
+-- > main = textUI "Mortgage payment" logic
+--
+-- Example input and output:
+--
+-- <<http://i.imgur.com/QimLicC.png Mortgage calculator program>>
+--
+-- Mad libs:
+--
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- > 
+-- > import Data.Monoid ((<>))
+-- > import Typed.Spreadsheet
+-- > 
+-- > exclamation = entry "Exclamation"
+-- > 
+-- > noun = entry "Noun"
+-- > 
+-- > verb = entry "Verb"
+-- > 
+-- > adjective = entry "Adjective"
+-- > 
+-- > example =
+-- >     "I want to " <> verb <> " every " <> noun <> " because they are so " <> adjective
+-- > 
+-- > main :: IO ()
+-- > main = textUI "Mad libs" example
+--
+-- The above program works because the `Updatable` type implements `IsString`
+-- and `Monoid`, so no `Applicative` operations are necessary
+--
+-- Example input and output:
+--
+-- <<http://i.imgur.com/k22An4Y.png Mad libs program>>
