@@ -1,4 +1,9 @@
 language: haskell
 
+addons:
+  apt:
+    packages:
+    - libgtk-3-dev
+
 install:
   - cabal install Cabal gtk2hs-buildtools && cabal install --only-dependencies --enable-tests
