@@ -5,7 +5,7 @@
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
--- > import Gtk.Composer
+-- > import Typed.Spreadsheet
 -- > 
 -- > main :: IO ()
 -- > main = textUI "Example program" logic
@@ -39,7 +39,7 @@
 --
 -- NOTE: You must compile your program with the @-threaded@ flag
 
-module Gtk.Composer (
+module Typed.Spreadsheet (
     -- * Types
       Updatable
     , textUI

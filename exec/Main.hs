@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Gtk.Composer
+import Typed.Spreadsheet
 
 main :: IO ()
 main = textUI "Example program" logic
