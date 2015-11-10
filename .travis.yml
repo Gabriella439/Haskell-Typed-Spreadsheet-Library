@@ -1,4 +1,4 @@
 language: haskell
 
 install:
-  - cabal install Cabal && cabal install --only-dependencies --enable-tests
+  - cabal install Cabal gtk2hs-buildtools && cabal install --only-dependencies --enable-tests
