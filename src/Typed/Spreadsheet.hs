@@ -5,6 +5,7 @@
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
+-- > import Control.Applicative
 -- > import Typed.Spreadsheet
 -- > 
 -- > main :: IO ()
@@ -390,6 +391,7 @@ display = Text.pack . show
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
+-- > import Control.Applicative
 -- > import Data.Text (Text)
 -- > import Typed.Spreadsheet
 -- > 

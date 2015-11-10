@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import Control.Applicative
 import Typed.Spreadsheet
 
 main :: IO ()
