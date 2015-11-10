@@ -53,7 +53,17 @@
 -- * You consume an @(`Updatable` `Text`)@ value using `textUI`, which displays
 --   the continuously updating value in the right panel of the user interface
 --
--- NOTE: You must compile your program with the @-threaded@ flag
+-- You can get started quickly by cloning and building this project:
+--
+-- > $ git clone https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library.git
+-- > $ stack build --install-ghc             # Builds the executable
+-- > $ stack exec typed-spreadsheet-example  # Runs the executable
+--
+-- That project includes the code for the above example in @exec/Main.hs@.  Just
+-- modify that file and rebuild to play with the example.
+--
+-- NOTE: You must compile your program with the @-threaded@ flag.  The example
+-- project takes care of this.
 
 module Typed.Spreadsheet (
     -- * Types
