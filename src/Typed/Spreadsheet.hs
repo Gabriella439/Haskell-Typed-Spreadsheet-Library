@@ -392,12 +392,14 @@ display = Text.pack . show
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
 -- > import Control.Applicative
+-- > import Data.Monoid ((<>))
 -- > import Data.Text (Text)
 -- > import Typed.Spreadsheet
 -- > 
 -- > payment :: Double -> Double -> Double -> Text
 -- > payment mortgageAmount numberOfYears yearlyInterestRate
--- >     = display (mortgageAmount * (i * (1 + i) ^ n) / ((1 + i) ^ n - 1))
+-- >     =  "Monthly payment: $"
+-- >     <> display (mortgageAmount * (i * (1 + i) ^ n) / ((1 + i) ^ n - 1))
 -- >   where
 -- >     n = truncate (numberOfYears * 12)
 -- >     i = yearlyInterestRate / 12 / 100
@@ -412,7 +414,7 @@ display = Text.pack . show
 --
 -- Example input and output:
 --
--- <<http://i.imgur.com/QimLicC.png Mortgage calculator program>>
+-- <<http://i.imgur.com/nvRZ9HC.png Mortgage calculator program>>
 --
 -- Mad libs:
 --
