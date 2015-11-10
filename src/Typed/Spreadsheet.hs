@@ -409,15 +409,15 @@ entry
     -> Updatable Text
 entry label = Updatable (\control -> _entry control label)
 
--- | A control that selects from one or more mutually exclusive values
+-- | A control that selects from one or more mutually exclusive choices
 radioButton
     :: Show a
     => Text
     -- ^ Label
     -> a
-    -- ^ 1st value (Default selection)
+    -- ^ 1st choice (Default selection)
     -> [a]
-    -- ^ Remaining values
+    -- ^ Remaining choices
     -> Updatable a
 radioButton label a0 as =
     Updatable (\control -> _radioButton control label a0 as)
