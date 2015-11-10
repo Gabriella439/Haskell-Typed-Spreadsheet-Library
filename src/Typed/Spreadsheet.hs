@@ -111,54 +111,6 @@ instance Applicative Cell where
 
             fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
 
-instance Monoid a => Monoid (Cell a) where
-    mempty = pure mempty
-
-    mappend = liftA2 mappend
-
-instance IsString a => IsString (Cell a) where
-    fromString str = pure (fromString str)
-
-instance Num a => Num (Cell a) where
-    fromInteger = pure . fromInteger
-
-    negate = fmap negate
-    abs    = fmap abs
-    signum = fmap signum
-
-    (+) = liftA2 (+)
-    (*) = liftA2 (*)
-    (-) = liftA2 (-)
-
-instance Fractional a => Fractional (Cell a) where
-    fromRational = pure . fromRational
-
-    recip = fmap recip
-
-    (/) = liftA2 (/)
-
-instance Floating a => Floating (Cell a) where
-    pi = pure pi
-
-    exp   = fmap exp
-    sqrt  = fmap sqrt
-    log   = fmap log
-    sin   = fmap sin
-    tan   = fmap tan
-    cos   = fmap cos
-    asin  = fmap sin
-    atan  = fmap atan
-    acos  = fmap acos
-    sinh  = fmap sinh
-    tanh  = fmap tanh
-    cosh  = fmap cosh
-    asinh = fmap asinh
-    atanh = fmap atanh
-    acosh = fmap acosh
-
-    (**)    = liftA2 (**)
-    logBase = liftA2 logBase
-
 -- | An updatable input value
 data Updatable a = Updatable (Control -> Cell a)
 
