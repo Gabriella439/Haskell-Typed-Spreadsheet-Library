@@ -418,8 +418,6 @@ display = Text.pack . show
 -- > import Data.Monoid ((<>))
 -- > import Typed.Spreadsheet
 -- > 
--- > exclamation = entry "Exclamation"
--- > 
 -- > noun = entry "Noun"
 -- > 
 -- > verb = entry "Verb"
