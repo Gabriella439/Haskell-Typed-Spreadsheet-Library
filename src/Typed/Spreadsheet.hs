@@ -26,6 +26,22 @@
 --
 -- <<http://i.imgur.com/TTxgSwN.png User interface after user input>>
 --
+-- Once @ghc-8.0@ is out then you can simplify the above program even further
+-- using the `ApplicativeDo` extension:
+--
+-- > {-# LANGUAGE ApplicativeDo     #-}
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- > 
+-- > import Typed.Spreadsheet
+-- > 
+-- > main :: IO ()
+-- > main = textUI "Example program" (do
+-- >     a <- checkBox   "a"
+-- >     b <- spinButton "b" 1
+-- >     c <- spinButton "c" 0.1
+-- >     d <- entry      "d"
+-- >     return (display (a, b + c, d)) )
+--
 -- The general workflow for this library is:
 --
 -- * You build primitive `Updatable` values using `checkBox`, `spinButton`,
