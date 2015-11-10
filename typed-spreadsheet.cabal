@@ -22,7 +22,7 @@ Description:
     * you can only output a single value; you simulate multiple outputs by
       emitting a tuple of values
     .
-    See the "Typed.Spreadsheet" module for a full example with code and pictures
+    See the "Typed.Spreadsheet" module for full examples with code and pictures
 Category: GUI
 Source-Repository head
     Type: git
