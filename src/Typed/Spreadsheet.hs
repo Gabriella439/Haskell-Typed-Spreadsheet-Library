@@ -72,6 +72,7 @@ module Typed.Spreadsheet (
     -- * Types
       Updatable
     , textUI
+    , graphicalUI
 
     -- * Controls
     , checkBox
@@ -87,12 +88,16 @@ module Typed.Spreadsheet (
     ) where
 
 import Control.Applicative
+import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (STM)
 import Control.Foldl (Fold(..))
 import Control.Monad.IO.Class (liftIO)
 import Data.Monoid
 import Data.String (IsString(..))
 import Data.Text (Text)
+import Diagrams.Backend.Cairo (Cairo)
+import Diagrams.Backend.Gtk (renderToGtk)
+import Diagrams.Prelude (Diagram, r2, translate, (#))
 import Lens.Micro (_Left, _Right)
 import Graphics.UI.Gtk (AttrOp((:=)))
 
@@ -192,7 +197,61 @@ textUI
     -> Updatable Text
     -- ^ Program logic
     -> IO ()
-textUI title (Updatable k) = do
+textUI = ui textSetup processTextEvent
+  where
+    textSetup :: Gtk.HBox -> IO Gtk.TextBuffer
+    textSetup hBox = do
+        textView   <- Gtk.textViewNew
+        textBuffer <- Gtk.get textView Gtk.textViewBuffer
+        Gtk.set textView
+            [ Gtk.textViewEditable      := False
+            , Gtk.textViewCursorVisible := False
+            ]
+
+        hAdjust <- Gtk.textViewGetHadjustment textView
+        vAdjust <- Gtk.textViewGetVadjustment textView
+        scrolledWindow <- Gtk.scrolledWindowNew (Just hAdjust) (Just vAdjust)
+        Gtk.set scrolledWindow
+            [ Gtk.containerChild           := textView
+            , Gtk.scrolledWindowShadowType := Gtk.ShadowIn
+            ]
+        Gtk.boxPackStart hBox scrolledWindow Gtk.PackGrow 0
+        return textBuffer
+
+    processTextEvent :: Gtk.TextBuffer -> Text -> IO ()
+    processTextEvent textBuffer txt =
+        Gtk.set textBuffer [ Gtk.textBufferText := txt ]
+
+-- | Build a `Diagram`-based user interface
+graphicalUI
+    :: Text
+    -- ^ Window title
+    -> Updatable (Diagram Cairo)
+    -- ^ Program logic
+    -> IO ()
+graphicalUI = ui setupGraphical processGraphicalEvent
+  where
+    setupGraphical :: Gtk.HBox -> IO Gtk.DrawingArea
+    setupGraphical hBox = do
+        drawingArea <- Gtk.drawingAreaNew
+        Gtk.boxPackStart hBox drawingArea Gtk.PackGrow 0
+        return drawingArea
+
+    processGraphicalEvent :: Gtk.DrawingArea -> Diagram Cairo -> IO ()
+    processGraphicalEvent drawingArea diagram = do
+        drawWindow <- Gtk.widgetGetDrawWindow drawingArea
+        (w, h) <- Gtk.widgetGetSize drawingArea
+        let w' = fromIntegral w / 2
+        let h' = fromIntegral h / 2
+        renderToGtk drawWindow (diagram # translate (r2 (w', h')))
+
+-- | Shared logic for `textUI` and `graphicalUI`
+ui  :: (Gtk.HBox -> IO a)
+    -> (a -> b -> IO ())
+    -> Text
+    -> Updatable b
+    -> IO ()
+ui setup process title (Updatable k) = do
     _ <- Gtk.initGUI
 
     window <- Gtk.windowNew
@@ -200,26 +259,11 @@ textUI title (Updatable k) = do
         [ Gtk.containerBorderWidth := 5
         ]
 
-    textView   <- Gtk.textViewNew
-    textBuffer <- Gtk.get textView Gtk.textViewBuffer
-    Gtk.set textView
-        [ Gtk.textViewEditable      := False
-        , Gtk.textViewCursorVisible := False
-        ]
-
-    hAdjust <- Gtk.textViewGetHadjustment textView
-    vAdjust <- Gtk.textViewGetVadjustment textView
-    scrolledWindow <- Gtk.scrolledWindowNew (Just hAdjust) (Just vAdjust)
-    Gtk.set scrolledWindow
-        [ Gtk.containerChild           := textView
-        , Gtk.scrolledWindowShadowType := Gtk.ShadowIn
-        ]
-
     vBox <- Gtk.vBoxNew False 5
 
     hBox <- Gtk.hBoxNew False 5
-    Gtk.boxPackStart hBox vBox           Gtk.PackNatural 0
-    Gtk.boxPackStart hBox scrolledWindow Gtk.PackGrow    0
+    Gtk.boxPackStart hBox vBox Gtk.PackNatural 0
+    a    <- setup hBox
 
     Gtk.set window
         [ Gtk.windowTitle         := title
@@ -320,13 +364,13 @@ textUI title (Updatable k) = do
 
     doneTMVar <- STM.newEmptyTMVarIO
 
-    let run :: Cell Text -> IO ()
-        run (Cell m) = do
+    let run (Cell m) = do
             (stm, Fold step begin done) <- Gtk.postGUISync m
+            -- I don't know why this delay is necessary for diagrams output
+            threadDelay 200000
             let loop x = do
-                    let txt = done x
-                    Gtk.postGUISync
-                        (Gtk.set textBuffer [ Gtk.textBufferText := txt ])
+                    let b = done x
+                    Gtk.postGUISync (process a b)
                     let doneTransaction = do
                             STM.takeTMVar doneTMVar
                             return Nothing

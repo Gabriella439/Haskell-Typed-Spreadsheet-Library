@@ -31,22 +31,35 @@ Source-Repository head
 Library
     Hs-Source-Dirs: src
     Build-Depends:
-        base          >= 4      && < 5   ,
-        async         >= 2.0    && < 2.1 ,
-        foldl         >= 1.1    && < 1.2 ,
-        gtk3          >= 0.14.0 && < 0.15,
-        microlens                  < 0.4 ,
-        stm                        < 2.5 ,
-        text                       < 1.3 ,
-        transformers >= 0.2.0.0 && < 0.5
+        base           >= 4      && < 5   ,
+        async          >= 2.0    && < 2.1 ,
+        diagrams-cairo >= 1.3    && < 1.4 ,
+        diagrams-gtk   >= 1.3    && < 1.4 ,
+        diagrams-lib   >= 1.3    && < 1.4 ,
+        foldl          >= 1.1    && < 1.2 ,
+        gtk            >= 0.13   && < 0.14,
+        microlens                   < 0.4 ,
+        stm                         < 2.5 ,
+        text                        < 1.3 ,
+        transformers  >= 0.2.0.0 && < 0.5
     Exposed-Modules: Typed.Spreadsheet
     GHC-Options: -O2 -Wall
 
 Executable typed-spreadsheet-example
     Hs-Source-Dirs: exec
-    Main-Is: Main.hs
+    Main-Is: Text.hs
     Build-Depends:
-        base    >= 4     && < 5  ,
-        typed-spreadsheet        ,
-        text                < 1.3
+        base >= 4 && < 5  ,
+        text         < 1.3,
+        typed-spreadsheet
+    GHC-Options: -O2 -Wall -threaded
+
+Executable typed-spreadsheet-example-graphics
+    Hs-Source-Dirs: exec
+    Main-Is: Graphics.hs
+    Build-Depends:
+        base           >= 4   && < 5  ,
+        diagrams-cairo >= 1.3 && < 1.4,
+        diagrams-lib   >= 1.3 && < 1.4,
+        typed-spreadsheet
     GHC-Options: -O2 -Wall -threaded
