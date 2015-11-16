@@ -181,6 +181,32 @@ Example input and output:
 
 ![](http://i.imgur.com/ueF0w7U.png Sinusoid plot)
 
+Factor diagram:
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+import Diagrams.Backend.Cairo (Cairo)
+import Diagrams.Prelude
+import Diagrams.TwoD.Factorization (factorDiagram')
+import Typed.Spreadsheet
+
+main :: IO ()
+main = graphicalUI "Factor diagram" logic
+  where
+    logic = combine <$> spinButton  "Factor #1" 1
+                    <*> spinButton  "Factor #2" 1
+                    <*> spinButton  "Factor #3" 1
+
+    combine :: Double -> Double -> Double -> Diagram Cairo
+    combine x y z =
+        factorDiagram' [truncate x, truncate y, truncate z] # scale 10
+```
+
+Example input and output:
+
+![](http://i.imgur.com/eMvMtKk.png)
+
 ## How to contribute
 
 The easiest way to contribute is to add new controls for user input.
