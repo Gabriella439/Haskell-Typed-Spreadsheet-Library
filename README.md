@@ -24,7 +24,7 @@ $ stack exec typed-spreadsheet-example          # Runs the text output example
 $ stack exec typed-spreadhseet-example-graphics # Runs the graphics exmaple
 ```
 
-The [executable code](https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library/blob/master/exec/Main.hs)
+The [executable code](https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library/blob/master/exec/Text.hs)
 for first example is short:
 
 ```haskell
@@ -49,7 +49,7 @@ the output on the right-hand side:
 ![](http://i.imgur.com/TTxgSwN.png)
 
 You can also output updatable diagrams built using the `diagrams` library, such
-as in this example:
+as [in this example](https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library/blob/master/exec/Graphics.hs):
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
