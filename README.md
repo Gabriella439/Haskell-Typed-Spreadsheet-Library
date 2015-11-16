@@ -15,14 +15,55 @@ ways:
 
 This project includes two example executables that you can build and tweak to
 test drive the library.  To clone, build, and run the executable just follow
-these commands:
+these commands depending on your operating system:
+
+## OS X
 
 ```bash
+$ # Installs the Gtk+ library
+$ brew install gtk
+
+$ # Creates a local copy of this repository
 $ git clone https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library.git
-$ stack build --install-ghc                     # Builds the executables
-$ stack exec typed-spreadsheet-example          # Runs the text output example
-$ stack exec typed-spreadhseet-example-graphics # Runs the graphics exmaple
+
+$ # Builds the executables
+$ stack build --stack-yaml=osx.yaml --install-ghc
+
+$ # Runs the text output example
+$ stack exec  --stack-yaml=osx.yaml typed-spreadsheet-example
+
+$ # Runs the graphical example
+$ stack exec  --stack-yaml=osx.yaml typed-spreadhseet-example-graphics
 ```
+
+## Debian
+
+These instructions will also probably work on other Linux distributions derived
+from Debian like Ubuntu or Mint:
+
+```bash
+$ # Install the Gtk+ 2.0 development headers
+$ sudo apt-get install libgtk2.0-dev
+
+$ # Creates a local copy of this repository
+$ git clone https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library.git
+
+$ # Builds the executables
+$ stack build --install-ghc
+
+$ # Runs the text output example
+$ stack exec typed-spreadsheet-example
+
+$ # Runs the graphical example
+$ stack exec typed-spreadhseet-example-graphics
+```
+
+## Other operating systems
+
+If you would like to contribute build instructions for other operating systems,
+please submit a pull request.
+
+## Examples
 
 The [executable code](https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library/blob/master/exec/Text.hs)
 for first example is short:
@@ -90,7 +131,7 @@ user input:
 To learn more about the library, read the
 [documentation on Hackage](http://hackage.haskell.org/package/typed-spreadsheet/docs/Typed-Spreadsheet.html).
 
-## Additional examples
+# Additional examples
 
 Mortgage calculator:
 
@@ -207,7 +248,7 @@ Example input and output:
 
 ![](http://i.imgur.com/eMvMtKk.png)
 
-## How to contribute
+# How to contribute
 
 The easiest way to contribute is to add new controls for user input.
 

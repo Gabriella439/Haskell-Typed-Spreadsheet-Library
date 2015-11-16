@@ -1,0 +1,10 @@
+flags: {}
+packages:
+- '.'
+extra-deps:
+- 'gtk-0.13.9'
+- 'diagrams-gtk-1.3'
+flags:
+    gtk:
+        have-quartz-gtk: true
+resolver: lts-3.14
