@@ -521,3 +521,34 @@ display = Text.pack . show
 -- Example input and output:
 --
 -- <<http://i.imgur.com/k22An4Y.png Mad libs program>>
+--
+-- Sinusoid plot:
+--
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- > 
+-- > import Diagrams.Backend.Cairo (Cairo)
+-- > import Diagrams.Prelude
+-- > import Typed.Spreadsheet
+-- > 
+-- > main :: IO ()
+-- > main = graphicalUI "Example program" logic
+-- >   where
+-- >     logic = combine <$> spinButton  "Amplitude (Pixels)"   0.1
+-- >                     <*> spinButton  "Frequency (Pixels⁻¹)" 0.001
+-- >                     <*> spinButton  "Phase (Degrees)"      1
+-- > 
+-- >     combine :: Double -> Double -> Double -> Diagram Cairo
+-- >     combine amplitude frequency phase = strokeP (fromVertices points) <> axes
+-- >       where
+-- >         axes = arrowBetween (p2 (0, 0)) (p2 ( 100,    0))
+-- >             <> arrowBetween (p2 (0, 0)) (p2 (-100,    0))
+-- >             <> arrowBetween (p2 (0, 0)) (p2 (   0,  100))
+-- >             <> arrowBetween (p2 (0, 0)) (p2 (   0, -100))
+-- > 
+-- >         f x = - amplitude * cos (frequency * x + phase * pi / 180)
+-- > 
+-- >         points = map (\x -> p2 (x, f x)) [-100, -99 .. 100]
+--
+-- Example input and output:
+--
+-- <<http://i.imgur.com/ueF0w7U.png Sinusoid plot>>
