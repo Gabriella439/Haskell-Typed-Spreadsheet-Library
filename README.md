@@ -13,18 +13,19 @@ ways:
 
 # Quick Start
 
-This project includes an example executable that you can build and tweak to
+This project includes two example executables that you can build and tweak to
 test drive the library.  To clone, build, and run the executable just follow
 these commands:
 
 ```bash
 $ git clone https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library.git
-$ stack build --install-ghc             # Builds the executable
-$ stack exec typed-spreadsheet-example  # Runs the executable
+$ stack build --install-ghc                     # Builds the executables
+$ stack exec typed-spreadsheet-example          # Runs the text output example
+$ stack exec typed-spreadhseet-example-graphics # Runs the graphics exmaple
 ```
 
 The [executable code](https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library/blob/master/exec/Main.hs)
-is short:
+for first example is short:
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
@@ -46,6 +47,45 @@ main = textUI "Example program" logic
 the output on the right-hand side:
 
 ![](http://i.imgur.com/TTxgSwN.png)
+
+You can also output updatable diagrams built using the `diagrams` library, such
+as in this example:
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+import Diagrams.Backend.Cairo (Cairo)
+import Diagrams.Prelude
+import Typed.Spreadsheet
+
+data AColor = Red | Orange | Yellow | Green | Blue | Purple
+    deriving (Enum, Bounded, Show)
+
+toColor :: AColor -> Colour Double
+toColor Red    = red
+toColor Orange = orange
+toColor Yellow = yellow
+toColor Green  = green
+toColor Blue   = blue
+toColor Purple = purple
+
+main :: IO ()
+main = graphicalUI "Example program" logic
+  where
+    logic = combine <$> radioButton "Color"        Red [Orange .. Purple]
+                    <*> spinButton  "Radius"       1
+                    <*> spinButton  "X Coordinate" 1
+                    <*> spinButton  "Y Coordinate" 1
+
+    combine :: AColor -> Double -> Double -> Double -> Diagram Cairo
+    combine color r x y =
+        circle (r + 100) # fc (toColor color) # translate (r2 (x, -y))
+```
+
+This produces a canvas that colors, resizes, and moves a circle in response to
+user input:
+
+![](http://i.imgur.com/ddYoG46.png)
 
 To learn more about the library, read the
 [documentation on Hackage](http://hackage.haskell.org/package/typed-spreadsheet/docs/Typed-Spreadsheet.html).
