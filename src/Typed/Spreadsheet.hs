@@ -116,6 +116,11 @@ module Typed.Spreadsheet (
     , entry
     , radioButton
 
+    -- * Controls with Defaults
+    , checkBoxAt
+    , spinButtonAt
+    , entryAt
+
     -- * Utilities
     , display
 
@@ -220,10 +225,10 @@ instance Floating a => Floating (Updatable a) where
 
 -- | Use a `Control` to obtain updatable input `Updatable`s
 data Control = Control
-    { _checkBox    :: Text -> Cell Bool
-    , _spinButton  :: Text -> Double -> Cell Double
-    , _entry       :: Text -> Cell Text
-    , _radioButton :: forall a . Show a => Text -> a -> [a] -> Cell a
+    { _checkBoxAt   :: Bool -> Text -> Cell Bool
+    , _spinButtonAt :: Double -> Text -> Double -> Cell Double
+    , _entryAt      :: Text -> Text -> Cell Text
+    , _radioButton  :: forall a . Show a => Text -> a -> [a] -> Cell a
     }
 
 -- | Build a `Text`-based user interface
@@ -308,14 +313,14 @@ ui setup process title (Updatable k) = do
         , Gtk.windowDefaultHeight := 400
         ]
 
-    let __spinButton :: Text -> Double -> Cell Double
-        __spinButton label stepX = Cell (do
+    let __spinButtonAt :: Double -> Text -> Double -> Cell Double
+        __spinButtonAt s0 label stepX = Cell (do
             tmvar      <- STM.newEmptyTMVarIO
             let minX = fromIntegral (minBound :: Int)
             let maxX = fromIntegral (maxBound :: Int)
             spinButton_ <- Gtk.spinButtonNewWithRange minX maxX stepX
             Gtk.set spinButton_
-                [ Gtk.spinButtonValue    := 0
+                [ Gtk.spinButtonValue    := s0
                 ]
             _  <- Gtk.onValueSpinned spinButton_ (do
                 n <- Gtk.get spinButton_ Gtk.spinButtonValue
@@ -329,12 +334,13 @@ ui setup process title (Updatable k) = do
 
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll vBox
-            return (STM.takeTMVar tmvar, Fold.lastDef 0) )
+            return (STM.takeTMVar tmvar, Fold.lastDef s0) )
 
-    let __checkBox :: Text -> Cell Bool
-        __checkBox label = Cell (do
+    let __checkBoxAt :: Bool -> Text -> Cell Bool
+        __checkBoxAt s0 label = Cell (do
             checkButton <- Gtk.checkButtonNewWithLabel label
 
+            Gtk.set checkButton [ Gtk.toggleButtonActive := s0 ]
             tmvar <- STM.newEmptyTMVarIO
             _     <- Gtk.on checkButton Gtk.toggled (do
                 pressed <- Gtk.get checkButton Gtk.toggleButtonActive
@@ -342,10 +348,10 @@ ui setup process title (Updatable k) = do
 
             Gtk.boxPackStart vBox checkButton Gtk.PackNatural 0
             Gtk.widgetShowAll vBox
-            return (STM.takeTMVar tmvar, Fold.lastDef False) )
+            return (STM.takeTMVar tmvar, Fold.lastDef s0) )
 
-    let __entry :: Text -> Cell Text
-        __entry label = Cell (do
+    let __entryAt :: Text -> Text -> Cell Text
+        __entryAt s0 label = Cell (do
             entry_ <- Gtk.entryNew
 
             frame <- Gtk.frameNew
@@ -353,6 +359,7 @@ ui setup process title (Updatable k) = do
                 [ Gtk.containerChild := entry_
                 , Gtk.frameLabel     := label
                 ]
+            Gtk.set entry_ [ Gtk.entryText := s0 ]
 
             tmvar <- STM.newEmptyTMVarIO
             _     <- Gtk.on entry_ Gtk.editableChanged (do
@@ -361,7 +368,7 @@ ui setup process title (Updatable k) = do
 
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll frame
-            return (STM.takeTMVar tmvar, Fold.lastDef Text.empty) )
+            return (STM.takeTMVar tmvar, Fold.lastDef s0) )
 
     let __radioButton :: Show a => Text -> a -> [a] -> Cell a
         __radioButton label x xs = Cell (do
@@ -373,8 +380,8 @@ ui setup process title (Updatable k) = do
                     button <- f (show a)
                     Gtk.boxPackStart vBoxRadio button Gtk.PackNatural 0
                     _ <- Gtk.on button Gtk.toggled (do
-                        mode <- Gtk.get button Gtk.toggleButtonMode
-                        if mode
+                        active <- Gtk.get button Gtk.toggleButtonActive
+                        if active
                             then STM.atomically (STM.putTMVar tmvar a)
                             else return () )
                     return button
@@ -392,10 +399,10 @@ ui setup process title (Updatable k) = do
             return (STM.takeTMVar tmvar, Fold.lastDef x) )
 
     let control = Control
-            { _checkBox    = __checkBox
-            , _spinButton  = __spinButton
-            , _entry       = __entry
-            , _radioButton = __radioButton
+            { _checkBoxAt   = __checkBoxAt
+            , _spinButtonAt = __spinButtonAt
+            , _entryAt      = __entryAt
+            , _radioButton  = __radioButton
             }
 
     doneTMVar <- STM.newEmptyTMVarIO
@@ -430,7 +437,7 @@ checkBox
     :: Text
     -- ^ Label
     -> Updatable Bool
-checkBox label = Updatable (\control -> _checkBox control label)
+checkBox = checkBoxAt False
 
 -- | A `Double` spin button
 spinButton
@@ -439,14 +446,14 @@ spinButton
     -> Double
     -- ^ Step size
     -> Updatable Double
-spinButton label x = Updatable (\control -> _spinButton control label x)
+spinButton = spinButtonAt 0
 
 -- | A `Text` entry
 entry
     :: Text
     -- ^ Label
     -> Updatable Text
-entry label = Updatable (\control -> _entry control label)
+entry = entryAt Text.empty
 
 -- | A control that selects from one or more mutually exclusive choices
 radioButton
@@ -460,6 +467,37 @@ radioButton
     -> Updatable a
 radioButton label a0 as =
     Updatable (\control -> _radioButton control label a0 as)
+
+-- | Same as `checkBox` except that you can specify the initial state
+checkBoxAt
+    :: Bool
+    -- ^ Initial state 
+    -> Text
+    -- ^ Label
+    -> Updatable Bool
+checkBoxAt s0 label =
+    Updatable (\control -> _checkBoxAt control s0 label)
+
+-- | Same as `spinButton` except that you can specify the initial state
+spinButtonAt
+    :: Double
+    -- ^ Initial state
+    -> Text
+    -- ^ Label
+    -> Double
+    -- ^ Step size
+    -> Updatable Double
+spinButtonAt s0 label x =
+    Updatable (\control -> _spinButtonAt control s0 label x)
+
+-- | Same as `entry` except that you can specify the initial state
+entryAt
+    :: Text
+    -- ^ Initial state
+    -> Text
+    -- ^ Label
+    -> Updatable Text
+entryAt s0 label = Updatable (\control -> _entryAt control s0 label)
 
 -- | Convert a `Show`able value to `Text`
 display :: Show a => a -> Text
