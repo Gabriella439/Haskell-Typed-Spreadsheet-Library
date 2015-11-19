@@ -65,14 +65,14 @@
 -- > main :: IO ()
 -- > main = graphicalUI "Example program" logic
 -- >   where
--- >     logic = combine <$> radioButton "Color"        Red [Orange .. Purple]
--- >                     <*> spinButton  "Radius"       1
--- >                     <*> spinButton  "X Coordinate" 1
--- >                     <*> spinButton  "Y Coordinate" 1
+-- >     logic = combine <$> radioButton       "Color"    Red [Orange .. Purple]
+-- >                     <*> spinButtonAt 100  "Radius"       1
+-- >                     <*> spinButton        "X Coordinate" 1
+-- >                     <*> spinButton        "Y Coordinate" 1
 -- > 
 -- >     combine :: AColor -> Double -> Double -> Double -> Diagram Cairo
 -- >     combine color r x y =
--- >         circle (r + 100) # fc (toColor color) # translate (r2 (x, -y))
+-- >         circle r # fc (toColor color) # translate (r2 (x, -y))
 --
 -- This produces a canvas that colors, resizes, and moves a circle in response
 -- to user input:
@@ -571,9 +571,9 @@ display = Text.pack . show
 -- > main :: IO ()
 -- > main = graphicalUI "Example program" logic
 -- >   where
--- >     logic = combine <$> spinButton  "Amplitude (Pixels)"   0.1
--- >                     <*> spinButton  "Frequency (Pixels⁻¹)" 0.001
--- >                     <*> spinButton  "Phase (Degrees)"      1
+-- >     logic = combine <$> spinButtonAt 50  "Amplitude (Pixels)"   0.1
+-- >                     <*> spinButtonAt 0.1 "Frequency (Pixels⁻¹)" 0.001
+-- >                     <*> spinButtonAt 90  "Phase (Degrees)"      1
 -- > 
 -- >     combine :: Double -> Double -> Double -> Diagram Cairo
 -- >     combine amplitude frequency phase = strokeP (fromVertices points) <> axes
@@ -603,9 +603,9 @@ display = Text.pack . show
 -- > main :: IO ()
 -- > main = graphicalUI "Factor diagram" logic
 -- >   where
--- >     logic = combine <$> spinButton  "Factor #1" 1
--- >                     <*> spinButton  "Factor #2" 1
--- >                     <*> spinButton  "Factor #3" 1
+-- >     logic = combine <$> spinButtonAt 3 "Factor #1" 1
+-- >                     <*> spinButtonAt 3 "Factor #2" 1
+-- >                     <*> spinButtonAt 3 "Factor #3" 1
 -- > 
 -- >     combine :: Double -> Double -> Double -> Diagram Cairo
 -- >     combine x y z =
