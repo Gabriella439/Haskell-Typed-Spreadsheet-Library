@@ -25,4 +25,4 @@ main = graphicalUI "Example program" logic
 
     combine :: AColor -> Double -> Double -> Double -> Diagram Cairo
     combine color r x y =
-        circle r # fc (toColor color) # translate (r2 (x, -y))
+        circle r # fc (toColor color) # translate (r2 (x, y))
