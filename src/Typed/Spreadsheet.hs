@@ -72,7 +72,7 @@
 -- > 
 -- >     combine :: AColor -> Double -> Double -> Double -> Diagram Cairo
 -- >     combine color r x y =
--- >         circle r # fc (toColor color) # translate (r2 (x, -y))
+-- >         circle r # fc (toColor color) # translate (r2 (x, y))
 --
 -- This produces a canvas that colors, resizes, and moves a circle in response
 -- to user input:
@@ -138,7 +138,7 @@ import Data.String (IsString(..))
 import Data.Text (Text)
 import Diagrams.Backend.Cairo (Cairo)
 import Diagrams.Backend.Gtk (renderToGtk)
-import Diagrams.Prelude (Diagram, r2, translate, (#))
+import Diagrams.Prelude (Diagram, r2, reflectY, translate, (#))
 import Lens.Micro (_Left, _Right)
 import Graphics.UI.Gtk (AttrOp((:=)))
 
@@ -284,7 +284,7 @@ graphicalUI = ui setupGraphical processGraphicalEvent
         (w, h) <- Gtk.widgetGetSize drawingArea
         let w' = fromIntegral w / 2
         let h' = fromIntegral h / 2
-        renderToGtk drawWindow (diagram # translate (r2 (w', h')))
+        renderToGtk drawWindow (diagram # reflectY # translate (r2 (w', h')))
 
 -- | Shared logic for `textUI` and `graphicalUI`
 ui  :: (Gtk.HBox -> IO a)
@@ -583,7 +583,7 @@ display = Text.pack . show
 -- >             <> arrowBetween (p2 (0, 0)) (p2 (   0,  100))
 -- >             <> arrowBetween (p2 (0, 0)) (p2 (   0, -100))
 -- > 
--- >         f x = - amplitude * cos (frequency * x + phase * pi / 180)
+-- >         f x = amplitude * cos (frequency * x + phase * pi / 180)
 -- > 
 -- >         points = map (\x -> p2 (x, f x)) [-100, -99 .. 100]
 --
