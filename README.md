@@ -33,7 +33,7 @@ $ # Runs the text output example
 $ stack exec  --stack-yaml=osx.yaml typed-spreadsheet-example
 
 $ # Runs the graphical example
-$ stack exec  --stack-yaml=osx.yaml typed-spreadhseet-example-graphics
+$ stack exec  --stack-yaml=osx.yaml typed-spreadsheet-example-graphics
 ```
 
 ## Debian
@@ -55,7 +55,7 @@ $ # Runs the text output example
 $ stack exec typed-spreadsheet-example
 
 $ # Runs the graphical example
-$ stack exec typed-spreadhseet-example-graphics
+$ stack exec typed-spreadsheet-example-graphics
 ```
 
 ## Other operating systems
