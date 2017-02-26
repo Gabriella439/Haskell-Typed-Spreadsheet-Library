@@ -1,14 +1,12 @@
+{-# LANGUAGE ApplicativeDo     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-import Control.Applicative
 import Typed.Spreadsheet
 
 main :: IO ()
-main = textUI "Example program" logic
-  where
-    logic = combine <$> checkBox   "a"
-                    <*> spinButton "b" 1
-                    <*> spinButton "c" 0.1
-                    <*> entry      "d"
-
-    combine a b c d = display (a, b + c, d)
+main = textUI "Example program" $ do
+    a <- checkBox   "a"
+    b <- spinButton "b" 1
+    c <- spinButton "c" 0.1
+    d <- entry      "d"
+    return (display (a, b + c, d))

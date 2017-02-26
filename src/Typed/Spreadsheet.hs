@@ -1,22 +1,21 @@
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE ApplicativeDo              #-}
 
 -- | The following program:
 --
+-- > {-# LANGUAGE ApplicativeDo     #-}
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
--- > import Control.Applicative
 -- > import Typed.Spreadsheet
 -- > 
 -- > main :: IO ()
--- > main = textUI "Example program" logic
--- >   where
--- >     logic = combine <$> checkBox   "a"
--- >                     <*> spinButton "b" 1
--- >                     <*> spinButton "c" 0.1
--- >                     <*> entry      "d"
--- > 
--- >     combine a b c d = display (a, b + c, d)
+-- > main = textUI "Example program" $ do
+-- >     a <- checkBox   "a"
+-- >     b <- spinButton "b" 1
+-- >     c <- spinButton "c" 0.1
+-- >     d <- entry      "d"
+-- >     return (display (a, b + c, d))
 --
 -- ... creates a user interface that looks like this:
 --
@@ -27,27 +26,11 @@
 --
 -- <<http://i.imgur.com/TTxgSwN.png User interface after user input>>
 --
--- Once @ghc-8.0@ is out then you can simplify the above program even further
--- using the `ApplicativeDo` extension:
+-- This library also supports graphical output, like in the following program:
 --
 -- > {-# LANGUAGE ApplicativeDo     #-}
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
--- > import Typed.Spreadsheet
--- > 
--- > main :: IO ()
--- > main = textUI "Example program" (do
--- >     a <- checkBox   "a"
--- >     b <- spinButton "b" 1
--- >     c <- spinButton "c" 0.1
--- >     d <- entry      "d"
--- >     return (display (a, b + c, d)) )
---
--- This library also supports graphical output, like in the following program:
---
--- > {-# LANGUAGE OverloadedStrings #-}
--- > 
--- > import Diagrams.Backend.Cairo (Cairo)
 -- > import Diagrams.Prelude
 -- > import Typed.Spreadsheet
 -- > 
@@ -63,16 +46,12 @@
 -- > toColor Purple = purple
 -- > 
 -- > main :: IO ()
--- > main = graphicalUI "Example program" logic
--- >   where
--- >     logic = combine <$> radioButton       "Color"    Red [Orange .. Purple]
--- >                     <*> spinButtonAt 100  "Radius"       1
--- >                     <*> spinButton        "X Coordinate" 1
--- >                     <*> spinButton        "Y Coordinate" 1
--- > 
--- >     combine :: AColor -> Double -> Double -> Double -> Diagram Cairo
--- >     combine color r x y =
--- >         circle r # fc (toColor color) # translate (r2 (x, y))
+-- > main = graphicalUI "Example program" $ do
+-- >     color <- radioButton      "Color"        Red [Orange .. Purple]
+-- >     r     <- spinButtonAt 100 "Radius"       1
+-- >     x     <- spinButton       "X Coordinate" 1
+-- >     y     <- spinButton       "Y Coordinate" 1
+-- >     return (circle r # fc (toColor color) # translate (r2 (x, y)))
 --
 -- This produces a canvas that colors, resizes, and moves a circle in response
 -- to user input:
@@ -84,9 +63,8 @@
 -- * You build primitive `Updatable` values using `checkBox`, `spinButton`,
 --   `entry`, or `radioButton`, each of which corresponds to a control on the
 --   left panel of the user interface
--- * You transform or combine `Updatable` values using `Functor` and
---   `Applicative` operations.  Composite values update whenever one of their
---   substituent values update
+-- * Combine `Updatable` values using @ApplicativeDo@ notation.  Composite values
+--   update whenever one of their substituent values update
 -- * You consume an @(`Updatable` `Text`)@ value using `textUI`, which displays
 --   the continuously updating value in the right panel of the user interface
 --
@@ -96,8 +74,12 @@
 -- > $ stack build --install-ghc             # Builds the executable
 -- > $ stack exec typed-spreadsheet-example  # Runs the executable
 --
--- That project includes the code for the above example in @exec/Main.hs@.  Just
--- modify that file and rebuild to play with the example.
+-- ... or if you are using OS X, then build the project using:
+--
+-- > $ stack --stack-yaml=osx.yaml build --install-ghc
+--
+-- That project includes the code for the above examples in the @exec/@
+-- subdirectory.  Just modify that file and rebuild to play with the example.
 --
 -- NOTE: You must compile your program with the @-threaded@ flag.  The example
 -- project takes care of this.
@@ -129,23 +111,22 @@ module Typed.Spreadsheet (
     ) where
 
 import Control.Applicative
-import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (STM)
 import Control.Foldl (Fold(..))
 import Control.Monad.IO.Class (liftIO)
-import Data.Monoid
 import Data.String (IsString(..))
 import Data.Text (Text)
 import Diagrams.Backend.Cairo (Cairo)
-import Diagrams.Backend.Gtk (renderToGtk)
 import Diagrams.Prelude (Diagram, r2, reflectY, translate, (#))
 import Lens.Micro (_Left, _Right)
 import Graphics.UI.Gtk (AttrOp((:=)))
 
+import qualified Control.Concurrent
 import qualified Control.Concurrent.STM   as STM
-import qualified Control.Concurrent.Async as Async
-import qualified Control.Foldl            as Fold
-import qualified Data.Text                as Text
+import qualified Control.Concurrent.Async
+import qualified Control.Foldl
+import qualified Diagrams.Backend.Gtk
+import qualified Data.Text
 import qualified Graphics.UI.Gtk          as Gtk
 
 data Cell a = forall e . Cell (IO (STM e, Fold e a))
@@ -162,7 +143,10 @@ instance Applicative Cell where
           where
             input = fmap Left inputF <|> fmap Right inputX
 
-            fold = Fold.handles _Left foldF <*> Fold.handles _Right foldX
+            fold  = do
+                f <- Control.Foldl.handles _Left foldF
+                x <- Control.Foldl.handles _Right foldX
+                return (f x)
 
 -- | An updatable input value
 data Updatable a = Updatable (Control -> Cell a)
@@ -284,7 +268,8 @@ graphicalUI = ui setupGraphical processGraphicalEvent
         (w, h) <- Gtk.widgetGetSize drawingArea
         let w' = fromIntegral w / 2
         let h' = fromIntegral h / 2
-        renderToGtk drawWindow (diagram # reflectY # translate (r2 (w', h')))
+        let diagram' = diagram # reflectY # translate (r2 (w', h'))
+        Diagrams.Backend.Gtk.renderToGtk drawWindow diagram'
 
 -- | Shared logic for `textUI` and `graphicalUI`
 ui  :: (Gtk.HBox -> IO a)
@@ -334,7 +319,7 @@ ui setup process title (Updatable k) = do
 
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll vBox
-            return (STM.takeTMVar tmvar, Fold.lastDef s0) )
+            return (STM.takeTMVar tmvar, Control.Foldl.lastDef s0) )
 
     let __checkBoxAt :: Bool -> Text -> Cell Bool
         __checkBoxAt s0 label = Cell (do
@@ -348,7 +333,7 @@ ui setup process title (Updatable k) = do
 
             Gtk.boxPackStart vBox checkButton Gtk.PackNatural 0
             Gtk.widgetShowAll vBox
-            return (STM.takeTMVar tmvar, Fold.lastDef s0) )
+            return (STM.takeTMVar tmvar, Control.Foldl.lastDef s0) )
 
     let __entryAt :: Text -> Text -> Cell Text
         __entryAt s0 label = Cell (do
@@ -368,7 +353,7 @@ ui setup process title (Updatable k) = do
 
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll frame
-            return (STM.takeTMVar tmvar, Fold.lastDef s0) )
+            return (STM.takeTMVar tmvar, Control.Foldl.lastDef s0) )
 
     let __radioButton :: Show a => Text -> a -> [a] -> Cell a
         __radioButton label x xs = Cell (do
@@ -376,13 +361,13 @@ ui setup process title (Updatable k) = do
 
             vBoxRadio <- Gtk.vBoxNew False 5
 
-            let makeButton f a = do
-                    button <- f (show a)
+            let makeButton f y = do
+                    button <- f (show y)
                     Gtk.boxPackStart vBoxRadio button Gtk.PackNatural 0
                     _ <- Gtk.on button Gtk.toggled (do
                         active <- Gtk.get button Gtk.toggleButtonActive
                         if active
-                            then STM.atomically (STM.putTMVar tmvar a)
+                            then STM.atomically (STM.putTMVar tmvar y)
                             else return () )
                     return button
 
@@ -396,7 +381,7 @@ ui setup process title (Updatable k) = do
                 ]
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll frame
-            return (STM.takeTMVar tmvar, Fold.lastDef x) )
+            return (STM.takeTMVar tmvar, Control.Foldl.lastDef x) )
 
     let control = Control
             { _checkBoxAt   = __checkBoxAt
@@ -410,7 +395,7 @@ ui setup process title (Updatable k) = do
     let run (Cell m) = do
             (stm, Fold step begin done) <- Gtk.postGUISync m
             -- I don't know why this delay is necessary for diagrams output
-            threadDelay 200000
+            Control.Concurrent.threadDelay 200000
             let loop x = do
                     let b = done x
                     Gtk.postGUISync (process a b)
@@ -428,9 +413,9 @@ ui setup process title (Updatable k) = do
         Gtk.mainQuit
         return False ))
     Gtk.widgetShowAll window
-    Async.withAsync (run (k control)) (\a -> do
+    Control.Concurrent.Async.withAsync (run (k control)) (\s -> do
         Gtk.mainGUI
-        Async.wait a )
+        Control.Concurrent.Async.wait s )
 
 -- | A check box that returns `True` if selected and `False` if unselected
 checkBox
@@ -453,7 +438,7 @@ entry
     :: Text
     -- ^ Label
     -> Updatable Text
-entry = entryAt Text.empty
+entry = entryAt Data.Text.empty
 
 -- | A control that selects from one or more mutually exclusive choices
 radioButton
@@ -501,7 +486,7 @@ entryAt s0 label = Updatable (\control -> _entryAt control s0 label)
 
 -- | Convert a `Show`able value to `Text`
 display :: Show a => a -> Text
-display = Text.pack . show
+display = Data.Text.pack . show
 
 -- $examples
 --
@@ -510,7 +495,6 @@ display = Text.pack . show
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
 -- > import Control.Applicative
--- > import Data.Monoid
 -- > import Data.Text (Text)
 -- > import Typed.Spreadsheet
 -- > 
@@ -538,7 +522,6 @@ display = Text.pack . show
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
--- > import Data.Monoid
 -- > import Typed.Spreadsheet
 -- > 
 -- > noun = entry "Noun"
@@ -564,28 +547,25 @@ display = Text.pack . show
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
--- > import Diagrams.Backend.Cairo (Cairo)
 -- > import Diagrams.Prelude
 -- > import Typed.Spreadsheet
 -- > 
 -- > main :: IO ()
--- > main = graphicalUI "Example program" logic
--- >   where
--- >     logic = combine <$> spinButtonAt 50  "Amplitude (Pixels)"   0.1
--- >                     <*> spinButtonAt 0.1 "Frequency (Pixels⁻¹)" 0.001
--- >                     <*> spinButtonAt 90  "Phase (Degrees)"      1
+-- > main = graphicalUI "Example program" $ do
+-- >     amplitude <- spinButtonAt 50  "Amplitude (Pixels)"   0.1
+-- >     frequency <- spinButtonAt 0.1 "Frequency (Pixels⁻¹)" 0.001
+-- >     phase     <- spinButtonAt 90  "Phase (Degrees)"      1
 -- > 
--- >     combine :: Double -> Double -> Double -> Diagram Cairo
--- >     combine amplitude frequency phase = strokeP (fromVertices points) <> axes
--- >       where
--- >         axes = arrowBetween (p2 (0, 0)) (p2 ( 100,    0))
+-- >     let axes = arrowBetween (p2 (0, 0)) (p2 ( 100,    0))
 -- >             <> arrowBetween (p2 (0, 0)) (p2 (-100,    0))
 -- >             <> arrowBetween (p2 (0, 0)) (p2 (   0,  100))
 -- >             <> arrowBetween (p2 (0, 0)) (p2 (   0, -100))
 -- > 
--- >         f x = amplitude * cos (frequency * x + phase * pi / 180)
+-- >     let f x = amplitude * cos (frequency * x + phase * pi / 180)
 -- > 
--- >         points = map (\x -> p2 (x, f x)) [-100, -99 .. 100]
+-- >     let points = map (\x -> p2 (x, f x)) [-100, -99 .. 100]
+-- > 
+-- >     return (strokeP (fromVertices points) <> axes)
 --
 -- Example input and output:
 --
@@ -595,21 +575,16 @@ display = Text.pack . show
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
--- > import Diagrams.Backend.Cairo (Cairo)
 -- > import Diagrams.Prelude
 -- > import Diagrams.TwoD.Factorization (factorDiagram')
 -- > import Typed.Spreadsheet
 -- > 
 -- > main :: IO ()
--- > main = graphicalUI "Factor diagram" logic
--- >   where
--- >     logic = combine <$> spinButtonAt 3 "Factor #1" 1
--- >                     <*> spinButtonAt 3 "Factor #2" 1
--- >                     <*> spinButtonAt 3 "Factor #3" 1
--- > 
--- >     combine :: Double -> Double -> Double -> Diagram Cairo
--- >     combine x y z =
--- >         factorDiagram' [truncate x, truncate y, truncate z] # scale 10
+-- > main = graphicalUI "Factor diagram" $ do
+-- >     x <- spinButtonAt 3 "Factor #1" 1
+-- >     y <- spinButtonAt 3 "Factor #2" 1
+-- >     z <- spinButtonAt 3 "Factor #3" 1
+-- >     return (factorDiagram' [truncate x, truncate y, truncate z] # scale 10)
 --
 -- Example input and output:
 --
