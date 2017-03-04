@@ -254,7 +254,7 @@ textUI = ui textSetup processTextEvent
 cellUI
     :: Text
     -- ^ Window title
-    -> Updatable [Text]
+    -> Updatable [(Text, Text)]
     -- ^ Program logic
     -> IO ()
 cellUI = ui cellSetup processCellEvent
@@ -265,59 +265,41 @@ cellUI = ui cellSetup processCellEvent
         Gtk.boxPackStart hBox vbox Gtk.PackGrow 0
         return vbox
 
-    processCellEvent :: Gtk.VBox -> [Text] -> IO ()
-    processCellEvent vbox txts = do
+    processCellEvent :: Gtk.VBox -> [(Text, Text)] -> IO ()
+    processCellEvent vbox keyVals = do
         cells <- Gtk.containerGetChildren vbox
-        let numCells = length cells
-        let numTxts  = length txts
-        if numCells <= numTxts
-            then do
-                let (prefix, suffix) = splitAt numCells txts
+        mapM_ (Gtk.containerRemove vbox) cells
 
-                let updateCell (txt, cell) = do
-                        let scrolledWindow = Gtk.castToScrolledWindow cell
-                        Just child <- Gtk.binGetChild scrolledWindow
-                        let textView = Gtk.castToTextView child
-                        textBuffer <- Gtk.get textView Gtk.textViewBuffer
-                        Gtk.set textBuffer [ Gtk.textBufferText := txt ]
-                mapM_ updateCell (zip prefix cells)
-
-                let createCell txt = do
-                        textView   <- Gtk.textViewNew
-                        textBuffer <- Gtk.get textView Gtk.textViewBuffer
-                        Gtk.set textView
-                            [ Gtk.textViewEditable      := False
-                            , Gtk.textViewCursorVisible := False
-                            ]
-                        Gtk.set textBuffer [ Gtk.textBufferText := txt ]
-                        hAdjust <- Gtk.textViewGetHadjustment textView
-                        vAdjust <- Gtk.textViewGetVadjustment textView
-                        scrolledWindow <- do
-                            Gtk.scrolledWindowNew (Just hAdjust) (Just vAdjust)
-                        Gtk.set scrolledWindow
-                            [ Gtk.containerChild :=
-                                textView
-                            , Gtk.scrolledWindowShadowType :=
-                                Gtk.ShadowIn
-                            , Gtk.scrolledWindowHscrollbarPolicy :=
-                                Gtk.PolicyAutomatic
-                            , Gtk.scrolledWindowVscrollbarPolicy :=
-                                Gtk.PolicyAutomatic
-                            ]
-                        Gtk.boxPackStart vbox scrolledWindow Gtk.PackNatural 0
-                mapM_ createCell suffix
-                Gtk.widgetShowAll vbox
-            else do
-                let (prefix, suffix) = splitAt numTxts cells
-                let updateCell (txt, cell) = do
-                        let scrolledWindow = Gtk.castToScrolledWindow cell
-                        Just child <- Gtk.binGetChild scrolledWindow
-                        let textView = Gtk.castToTextView child
-                        textBuffer <- Gtk.get textView Gtk.textViewBuffer
-                        Gtk.set textBuffer [ Gtk.textBufferText := txt ]
-                mapM_ updateCell (zip txts prefix)
-
-                mapM_ (Gtk.containerRemove vbox) suffix
+        let createCell (key, val) = do
+                textView   <- Gtk.textViewNew
+                textBuffer <- Gtk.get textView Gtk.textViewBuffer
+                Gtk.set textView
+                    [ Gtk.textViewEditable      := False
+                    , Gtk.textViewCursorVisible := False
+                    ]
+                Gtk.set textBuffer [ Gtk.textBufferText := val ]
+                hAdjust <- Gtk.textViewGetHadjustment textView
+                vAdjust <- Gtk.textViewGetVadjustment textView
+                scrolledWindow <- do
+                    Gtk.scrolledWindowNew (Just hAdjust) (Just vAdjust)
+                Gtk.set scrolledWindow
+                    [ Gtk.containerChild :=
+                        textView
+                    , Gtk.scrolledWindowShadowType :=
+                        Gtk.ShadowIn
+                    , Gtk.scrolledWindowHscrollbarPolicy :=
+                        Gtk.PolicyAutomatic
+                    , Gtk.scrolledWindowVscrollbarPolicy :=
+                        Gtk.PolicyAutomatic
+                    ]
+                frame <- Gtk.frameNew
+                Gtk.set frame
+                    [ Gtk.containerChild := scrolledWindow
+                    , Gtk.frameLabel     := key
+                    ]
+                Gtk.boxPackStart vbox frame Gtk.PackNatural 0
+        mapM_ createCell keyVals
+        Gtk.widgetShowAll vbox
 
 -- | Build a `Diagram`-based user interface
 graphicalUI
