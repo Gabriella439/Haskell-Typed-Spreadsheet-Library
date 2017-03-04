@@ -2,6 +2,7 @@ Name: typed-spreadsheet
 Version: 1.1.0
 Cabal-Version: >=1.8.0.2
 Build-Type: Simple
+Tested-With: GHC == 7.10.2, GHC == 8.0.1
 License: BSD3
 License-File: LICENSE
 Copyright: 2015 Gabriel Gonzalez
@@ -45,7 +46,7 @@ Library
     if os(darwin)
       frameworks: Cocoa
     Exposed-Modules: Typed.Spreadsheet
-    GHC-Options: -O2 -Wall
+    GHC-Options: -Wall
 
 Executable typed-spreadsheet-example
     Hs-Source-Dirs: exec
@@ -56,7 +57,7 @@ Executable typed-spreadsheet-example
         typed-spreadsheet
     if os(darwin)
       frameworks: Cocoa
-    GHC-Options: -O2 -Wall -threaded
+    GHC-Options: -Wall -threaded
 
 Executable typed-spreadsheet-example-graphics
     Hs-Source-Dirs: exec
@@ -67,4 +68,4 @@ Executable typed-spreadsheet-example-graphics
         typed-spreadsheet
     if os(darwin)
       frameworks: Cocoa
-    GHC-Options: -O2 -Wall -threaded
+    GHC-Options: -Wall -threaded
