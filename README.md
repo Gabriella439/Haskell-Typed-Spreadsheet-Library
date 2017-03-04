@@ -69,19 +69,18 @@ The [executable code](https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Li
 for first example is short:
 
 ```haskell
+{-# LANGUAGE ApplicativeDo     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import Typed.Spreadsheet
 
 main :: IO ()
-main = textUI "Example program" logic
-  where
-    logic = combine <$> checkBox   "a"
-                    <*> spinButton "b" 1
-                    <*> spinButton "c" 0.1
-                    <*> entry      "d"
-
-    combine a b c d = display (a, b + c, d)
+main = textUI "Example program" $ do
+    a <- checkBox   "a"
+    b <- spinButton "b" 1
+    c <- spinButton "c" 0.1
+    d <- entry      "d"
+    return (display (a, b + c, d))
 ```
 
 ... and translates to a spreadsheet with all inputs on the left-hand side and
@@ -93,9 +92,9 @@ You can also output updatable diagrams built using the `diagrams` library, such
 as [in this example](https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library/blob/master/exec/Graphics.hs):
 
 ```haskell
+{-# LANGUAGE ApplicativeDo     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-import Diagrams.Backend.Cairo (Cairo)
 import Diagrams.Prelude
 import Typed.Spreadsheet
 
@@ -111,16 +110,12 @@ toColor Blue   = blue
 toColor Purple = purple
 
 main :: IO ()
-main = graphicalUI "Example program" logic
-  where
-    logic = combine <$> radioButton "Color"        Red [Orange .. Purple]
-                    <*> spinButton  "Radius"       1
-                    <*> spinButton  "X Coordinate" 1
-                    <*> spinButton  "Y Coordinate" 1
-
-    combine :: AColor -> Double -> Double -> Double -> Diagram Cairo
-    combine color r x y =
-        circle (r + 100) # fc (toColor color) # translate (r2 (x, -y))
+main = graphicalUI "Example program" $ do
+    color <- radioButton      "Color"        Red [Orange .. Purple]
+    r     <- spinButtonAt 100 "Radius"       1
+    x     <- spinButton       "X Coordinate" 1
+    y     <- spinButton       "Y Coordinate" 1
+    return (circle r # fc (toColor color) # translate (r2 (x, y)))
 ```
 
 This produces a canvas that colors, resizes, and moves a circle in response to
@@ -136,28 +131,19 @@ To learn more about the library, read the
 Mortgage calculator:
 
 ```haskell
+{-# LANGUAGE ApplicativeDo     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-import Control.Applicative
-import Data.Monoid
-import Data.Text (Text)
 import Typed.Spreadsheet
 
-payment :: Double -> Double -> Double -> Text
-payment mortgageAmount numberOfYears yearlyInterestRate
-    =  "Monthly payment: $"
-    <> display (mortgageAmount * (i * (1 + i) ^ n) / ((1 + i) ^ n - 1))
-  where
-    n = truncate (numberOfYears * 12)
-    i = yearlyInterestRate / 12 / 100
-
-logic :: Updatable Text
-logic = payment <$> spinButton "Mortgage Amount"          1000
-                <*> spinButton "Number of years"             1
-                <*> spinButton "Yearly interest rate (%)"    0.01
-
 main :: IO ()
-main = textUI "Mortgage payment" logic
+main = textUI "Mortgage payment" $ do
+  mortgageAmount     <- spinButton "Mortgage Amount"          1000
+  numberOfYears      <- spinButton "Number of years"             1
+  yearlyInterestRate <- spinButton "Yearly interest rate (%)"    0.01
+  let n = truncate (numberOfYears * 12)
+  let i = yearlyInterestRate / 12 / 100
+  return ("Monthly payment: $" <> display (mortgageAmount * (i * (1 + i) ^ n) / ((1 + i) ^ n - 1)))
 ```
 
 Example input and output:
@@ -169,7 +155,6 @@ Mad libs:
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
-import Data.Monoid
 import Typed.Spreadsheet
 
 noun = entry "Noun"
@@ -194,28 +179,25 @@ Sinusoid plot:
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
-import Diagrams.Backend.Cairo (Cairo)
 import Diagrams.Prelude
 import Typed.Spreadsheet
 
 main :: IO ()
-main = graphicalUI "Example program" logic
-  where
-    logic = combine <$> spinButton  "Amplitude (Pixels)"   0.1
-                    <*> spinButton  "Frequency (Pixels⁻¹)" 0.001
-                    <*> spinButton  "Phase (Degrees)"      1
+main = graphicalUI "Example program" $ do
+    amplitude <- spinButtonAt 50  "Amplitude (Pixels)"   0.1
+    frequency <- spinButtonAt 0.1 "Frequency (Pixels⁻¹)" 0.001
+    phase     <- spinButtonAt 90  "Phase (Degrees)"      1
 
-    combine :: Double -> Double -> Double -> Diagram Cairo
-    combine amplitude frequency phase = strokeP (fromVertices points) <> axes
-      where
-        axes = arrowBetween (p2 (0, 0)) (p2 ( 100,    0))
+    let axes = arrowBetween (p2 (0, 0)) (p2 ( 100,    0))
             <> arrowBetween (p2 (0, 0)) (p2 (-100,    0))
             <> arrowBetween (p2 (0, 0)) (p2 (   0,  100))
             <> arrowBetween (p2 (0, 0)) (p2 (   0, -100))
 
-        f x = - amplitude * cos (frequency * x + phase * pi / 180)
+    let f x = amplitude * cos (frequency * x + phase * pi / 180)
 
-        points = map (\x -> p2 (x, f x)) [-100, -99 .. 100]
+    let points = map (\x -> p2 (x, f x)) [-100, -99 .. 100]
+
+    return (strokeP (fromVertices points) <> axes)
 ```
 
 Example input and output:
@@ -227,21 +209,16 @@ Factor diagram:
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
-import Diagrams.Backend.Cairo (Cairo)
 import Diagrams.Prelude
 import Diagrams.TwoD.Factorization (factorDiagram')
 import Typed.Spreadsheet
 
 main :: IO ()
-main = graphicalUI "Factor diagram" logic
-  where
-    logic = combine <$> spinButton  "Factor #1" 1
-                    <*> spinButton  "Factor #2" 1
-                    <*> spinButton  "Factor #3" 1
-
-    combine :: Double -> Double -> Double -> Diagram Cairo
-    combine x y z =
-        factorDiagram' [truncate x, truncate y, truncate z] # scale 10
+main = graphicalUI "Factor diagram" $ do
+    x <- spinButtonAt 3 "Factor #1" 1
+    y <- spinButtonAt 3 "Factor #2" 1
+    z <- spinButtonAt 3 "Factor #3" 1
+    return (factorDiagram' [truncate x, truncate y, truncate z] # scale 10)
 ```
 
 Example input and output:

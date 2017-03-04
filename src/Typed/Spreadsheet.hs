@@ -492,27 +492,19 @@ display = Data.Text.pack . show
 --
 -- Mortgage calculator:
 --
+-- > {-# LANGUAGE ApplicativeDo     #-}
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- > 
--- > import Control.Applicative
--- > import Data.Text (Text)
 -- > import Typed.Spreadsheet
 -- > 
--- > payment :: Double -> Double -> Double -> Text
--- > payment mortgageAmount numberOfYears yearlyInterestRate
--- >     =  "Monthly payment: $"
--- >     <> display (mortgageAmount * (i * (1 + i) ^ n) / ((1 + i) ^ n - 1))
--- >   where
--- >     n = truncate (numberOfYears * 12)
--- >     i = yearlyInterestRate / 12 / 100
--- > 
--- > logic :: Updatable Text
--- > logic = payment <$> spinButton "Mortgage Amount"          1000
--- >                 <*> spinButton "Number of years"             1
--- >                 <*> spinButton "Yearly interest rate (%)"    0.01
--- > 
 -- > main :: IO ()
--- > main = textUI "Mortgage payment" logic
+-- > main = textUI "Mortgage payment" $ do
+-- >   mortgageAmount     <- spinButton "Mortgage Amount"          1000
+-- >   numberOfYears      <- spinButton "Number of years"             1
+-- >   yearlyInterestRate <- spinButton "Yearly interest rate (%)"    0.01
+-- >   let n = truncate (numberOfYears * 12)
+-- >   let i = yearlyInterestRate / 12 / 100
+-- >   return ("Monthly payment: $" <> display (mortgageAmount * (i * (1 + i) ^ n) / ((1 + i) ^ n - 1)))
 --
 -- Example input and output:
 --
