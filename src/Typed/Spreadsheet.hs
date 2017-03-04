@@ -90,6 +90,7 @@ module Typed.Spreadsheet (
     -- * Types
       Updatable
     , textUI
+    , cellUI
     , graphicalUI
 
     -- * Controls
@@ -125,8 +126,8 @@ import qualified Control.Concurrent
 import qualified Control.Concurrent.STM   as STM
 import qualified Control.Concurrent.Async
 import qualified Control.Foldl
-import qualified Diagrams.Backend.Gtk
 import qualified Data.Text
+import qualified Diagrams.Backend.Gtk
 import qualified Graphics.UI.Gtk          as Gtk
 
 data Cell a = forall e . Cell (IO (STM e, Fold e a))
@@ -237,8 +238,10 @@ textUI = ui textSetup processTextEvent
         vAdjust <- Gtk.textViewGetVadjustment textView
         scrolledWindow <- Gtk.scrolledWindowNew (Just hAdjust) (Just vAdjust)
         Gtk.set scrolledWindow
-            [ Gtk.containerChild           := textView
-            , Gtk.scrolledWindowShadowType := Gtk.ShadowIn
+            [ Gtk.containerChild                 := textView
+            , Gtk.scrolledWindowShadowType       := Gtk.ShadowIn
+            , Gtk.scrolledWindowHscrollbarPolicy := Gtk.PolicyAutomatic
+            , Gtk.scrolledWindowVscrollbarPolicy := Gtk.PolicyAutomatic
             ]
         Gtk.boxPackStart hBox scrolledWindow Gtk.PackGrow 0
         return textBuffer
@@ -246,6 +249,75 @@ textUI = ui textSetup processTextEvent
     processTextEvent :: Gtk.TextBuffer -> Text -> IO ()
     processTextEvent textBuffer txt =
         Gtk.set textBuffer [ Gtk.textBufferText := txt ]
+
+-- | Build a cell-based user interface
+cellUI
+    :: Text
+    -- ^ Window title
+    -> Updatable [Text]
+    -- ^ Program logic
+    -> IO ()
+cellUI = ui cellSetup processCellEvent
+  where
+    cellSetup :: Gtk.HBox -> IO Gtk.VBox
+    cellSetup hBox = do
+        vbox <- Gtk.vBoxNew False 5
+        Gtk.boxPackStart hBox vbox Gtk.PackGrow 0
+        return vbox
+
+    processCellEvent :: Gtk.VBox -> [Text] -> IO ()
+    processCellEvent vbox txts = do
+        cells <- Gtk.containerGetChildren vbox
+        let numCells = length cells
+        let numTxts  = length txts
+        if numCells <= numTxts
+            then do
+                let (prefix, suffix) = splitAt numCells txts
+
+                let updateCell (txt, cell) = do
+                        let scrolledWindow = Gtk.castToScrolledWindow cell
+                        Just child <- Gtk.binGetChild scrolledWindow
+                        let textView = Gtk.castToTextView child
+                        textBuffer <- Gtk.get textView Gtk.textViewBuffer
+                        Gtk.set textBuffer [ Gtk.textBufferText := txt ]
+                mapM_ updateCell (zip prefix cells)
+
+                let createCell txt = do
+                        textView   <- Gtk.textViewNew
+                        textBuffer <- Gtk.get textView Gtk.textViewBuffer
+                        Gtk.set textView
+                            [ Gtk.textViewEditable      := False
+                            , Gtk.textViewCursorVisible := False
+                            ]
+                        Gtk.set textBuffer [ Gtk.textBufferText := txt ]
+                        hAdjust <- Gtk.textViewGetHadjustment textView
+                        vAdjust <- Gtk.textViewGetVadjustment textView
+                        scrolledWindow <- do
+                            Gtk.scrolledWindowNew (Just hAdjust) (Just vAdjust)
+                        Gtk.set scrolledWindow
+                            [ Gtk.containerChild :=
+                                textView
+                            , Gtk.scrolledWindowShadowType :=
+                                Gtk.ShadowIn
+                            , Gtk.scrolledWindowHscrollbarPolicy :=
+                                Gtk.PolicyAutomatic
+                            , Gtk.scrolledWindowVscrollbarPolicy :=
+                                Gtk.PolicyAutomatic
+                            ]
+                        Gtk.boxPackStart vbox scrolledWindow Gtk.PackNatural 0
+                mapM_ createCell suffix
+                Gtk.widgetShowAll vbox
+            else do
+                let (prefix, suffix) = splitAt numTxts cells
+                let updateCell (txt, cell) = do
+                        let scrolledWindow = Gtk.castToScrolledWindow cell
+                        Just child <- Gtk.binGetChild scrolledWindow
+                        let textView = Gtk.castToTextView child
+                        textBuffer <- Gtk.get textView Gtk.textViewBuffer
+                        Gtk.set textBuffer [ Gtk.textBufferText := txt ]
+                mapM_ updateCell (zip txts prefix)
+
+                mapM_ (Gtk.containerRemove vbox) suffix
 
 -- | Build a `Diagram`-based user interface
 graphicalUI

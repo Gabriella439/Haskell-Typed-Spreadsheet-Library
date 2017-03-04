@@ -47,7 +47,7 @@ Library
     Exposed-Modules: Typed.Spreadsheet
     GHC-Options: -O2 -Wall
 
-Executable typed-spreadsheet-example
+Executable typed-spreadsheet-example-text
     Hs-Source-Dirs: exec
     Main-Is: Text.hs
     Build-Depends:
@@ -57,6 +57,17 @@ Executable typed-spreadsheet-example
     if os(darwin)
       frameworks: Cocoa
     GHC-Options: -O2 -Wall -threaded
+
+Executable typed-spreadsheet-example-cell
+    Hs-Source-Dirs: exec
+    Main-Is: Cell.hs
+    Build-Depends:
+        base >= 4.9 && < 5  ,
+        text           < 1.3,
+        typed-spreadsheet
+    if os(darwin)
+      frameworks: Cocoa
+    GHC-Options: -Wall -threaded
 
 Executable typed-spreadsheet-example-graphics
     Hs-Source-Dirs: exec
