@@ -148,7 +148,7 @@ main = textUI "Mortgage payment" $ do
 
 Example input and output:
 
-![](http://i.imgur.com/nvRZ9HC.png Mortgage calculator program)
+![Mortgage calculator program](http://i.imgur.com/nvRZ9HC.png)
 
 Mad libs:
 
@@ -172,7 +172,7 @@ main = textUI "Mad libs" example
 
 Example input and output:
 
-![](http://i.imgur.com/k22An4Y.png Mad libs program)
+![Mad libs program](http://i.imgur.com/k22An4Y.png)
 
 Sinusoid plot:
 
@@ -202,7 +202,7 @@ main = graphicalUI "Example program" $ do
 
 Example input and output:
 
-![](http://i.imgur.com/ueF0w7U.png Sinusoid plot)
+![Sinusoid plot](http://i.imgur.com/ueF0w7U.png)
 
 Factor diagram:
 
@@ -223,7 +223,7 @@ main = graphicalUI "Factor diagram" $ do
 
 Example input and output:
 
-![](http://i.imgur.com/eMvMtKk.png)
+![Factor diagram](http://i.imgur.com/eMvMtKk.png)
 
 # How to contribute
 
