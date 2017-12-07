@@ -102,6 +102,9 @@ module Typed.Spreadsheet (
     -- * Controls with Defaults
     , checkBoxAt
     , spinButtonAt
+    , hscale
+    , hscaleAt
+    , hscaleWithRange
     , entryAt
 
     -- * Utilities
@@ -210,10 +213,11 @@ instance Floating a => Floating (Updatable a) where
 
 -- | Use a `Control` to obtain updatable input `Updatable`s
 data Control = Control
-    { _checkBoxAt   :: Bool -> Text -> Cell Bool
-    , _spinButtonAt :: Double -> Text -> Double -> Cell Double
-    , _entryAt      :: Text -> Text -> Cell Text
-    , _radioButton  :: forall a . Show a => Text -> a -> [a] -> Cell a
+    { _checkBoxAt      :: Bool -> Text -> Cell Bool
+    , _spinButtonAt    :: Double -> Text -> Double -> Cell Double
+    , _hscaleWithRange :: Double -> Double -> Double -> Text -> Double -> Cell Double
+    , _entryAt         :: Text -> Text -> Cell Text
+    , _radioButton     :: forall a . Show a => Text -> a -> [a] -> Cell a
     }
 
 -- | Build a `Text`-based user interface
@@ -375,6 +379,27 @@ ui setup process title (Updatable k) = do
             Gtk.widgetShowAll vBox
             return (STM.takeTMVar tmvar, Control.Foldl.lastDef s0) )
 
+    let __hscaleWithRange :: Double -> Double -> Double -> Text -> Double -> Cell Double
+        __hscaleWithRange minX maxX s0 label stepX = Cell (do
+            tmvar      <- STM.newEmptyTMVarIO
+            hslider <- Gtk.hScaleNewWithRange minX maxX stepX
+            Gtk.set hslider
+                [ Gtk.rangeValue    := s0
+                ]
+            _  <- Gtk.onRangeValueChanged hslider (do
+                n <- Gtk.get hslider Gtk.rangeValue
+                STM.atomically (STM.putTMVar tmvar n) )
+
+            frame <- Gtk.frameNew
+            Gtk.set frame
+                [ Gtk.containerChild := hslider
+                , Gtk.frameLabel     := label
+                ]
+
+            Gtk.boxPackStart vBox frame Gtk.PackNatural 0
+            Gtk.widgetShowAll vBox
+            return (STM.takeTMVar tmvar, Control.Foldl.lastDef s0) )
+
     let __checkBoxAt :: Bool -> Text -> Cell Bool
         __checkBoxAt s0 label = Cell (do
             checkButton <- Gtk.checkButtonNewWithLabel label
@@ -438,10 +463,11 @@ ui setup process title (Updatable k) = do
             return (STM.takeTMVar tmvar, Control.Foldl.lastDef x) )
 
     let control = Control
-            { _checkBoxAt   = __checkBoxAt
-            , _spinButtonAt = __spinButtonAt
-            , _entryAt      = __entryAt
-            , _radioButton  = __radioButton
+            { _checkBoxAt      = __checkBoxAt
+            , _spinButtonAt    = __spinButtonAt
+            , _hscaleWithRange = __hscaleWithRange
+            , _entryAt         = __entryAt
+            , _radioButton     = __radioButton
             }
 
     doneTMVar <- STM.newEmptyTMVarIO
@@ -487,6 +513,15 @@ spinButton
     -> Updatable Double
 spinButton = spinButtonAt 0
 
+-- | A `Double` horizontal slider
+hscale
+    :: Text
+    -- ^ Label
+    -> Double
+    -- ^ Step size
+    -> Updatable Double
+hscale = hscaleAt 0
+
 -- | A `Text` entry
 entry
     :: Text
@@ -528,6 +563,33 @@ spinButtonAt
     -> Updatable Double
 spinButtonAt s0 label x =
     Updatable (\control -> _spinButtonAt control s0 label x)
+
+-- | Same as `hscaleButton` except that you can specify the initial state
+hscaleAt
+    :: Double
+    -- ^ Initial state
+    -> Text
+    -- ^ Label
+    -> Double
+    -- ^ Step size
+    -> Updatable Double
+hscaleAt = hscaleWithRange (fromIntegral (minBound :: Int)) (fromIntegral (maxBound :: Int))
+
+-- | Same as `hscaleButton` except that you can specify the range and initial state
+hscaleWithRange
+    :: Double
+    -- ^ Minimum value
+    -> Double
+    -- ^ Maximum value
+    -> Double
+    -- ^ Initial state
+    -> Text
+    -- ^ Label
+    -> Double
+    -- ^ Step size
+    -> Updatable Double
+hscaleWithRange b0 b1 s0 label x =
+    Updatable (\control -> _hscaleWithRange control b0 b1 s0 label x)
 
 -- | Same as `entry` except that you can specify the initial state
 entryAt
