@@ -105,6 +105,9 @@ module Typed.Spreadsheet (
     , hscale
     , hscaleAt
     , hscaleWithRange
+    , vscale
+    , vscaleAt
+    , vscaleWithRange
     , entryAt
 
     -- * Utilities
@@ -216,6 +219,7 @@ data Control = Control
     { _checkBoxAt      :: Bool -> Text -> Cell Bool
     , _spinButtonAt    :: Double -> Text -> Double -> Cell Double
     , _hscaleWithRange :: Double -> Double -> Double -> Text -> Double -> Cell Double
+    , _vscaleWithRange :: Double -> Double -> Double -> Text -> Double -> Cell Double
     , _entryAt         :: Text -> Text -> Cell Text
     , _radioButton     :: forall a . Show a => Text -> a -> [a] -> Cell a
     }
@@ -380,24 +384,41 @@ ui setup process title (Updatable k) = do
             return (STM.takeTMVar tmvar, Control.Foldl.lastDef s0) )
 
     let __hscaleWithRange :: Double -> Double -> Double -> Text -> Double -> Cell Double
-        __hscaleWithRange minX maxX s0 label stepX = Cell (do
+        __hscaleWithRange minY maxY s0 label stepY = Cell (do
             tmvar      <- STM.newEmptyTMVarIO
-            hslider <- Gtk.hScaleNewWithRange minX maxX stepX
-            Gtk.set hslider
+            slider <- Gtk.hScaleNewWithRange minY maxY stepY
+            Gtk.set slider
                 [ Gtk.rangeValue    := s0
                 ]
-            _  <- Gtk.onRangeValueChanged hslider (do
-                n <- Gtk.get hslider Gtk.rangeValue
+            _  <- Gtk.onRangeValueChanged slider (do
+                n <- Gtk.get slider Gtk.rangeValue
                 STM.atomically (STM.putTMVar tmvar n) )
-
             frame <- Gtk.frameNew
             Gtk.set frame
-                [ Gtk.containerChild := hslider
+                [ Gtk.containerChild := slider
                 , Gtk.frameLabel     := label
                 ]
-
             Gtk.boxPackStart vBox frame Gtk.PackNatural 0
             Gtk.widgetShowAll vBox
+            return (STM.takeTMVar tmvar, Control.Foldl.lastDef s0) )
+
+    let __vscaleWithRange :: Double -> Double -> Double -> Text -> Double -> Cell Double
+        __vscaleWithRange minY maxY s0 label stepY = Cell (do
+            tmvar      <- STM.newEmptyTMVarIO
+            slider <- Gtk.vScaleNewWithRange minY maxY stepY
+            Gtk.set slider
+                [ Gtk.rangeValue    := (-s0)
+                ]
+            _  <- Gtk.onRangeValueChanged slider (do
+                n <- Gtk.get slider Gtk.rangeValue
+                STM.atomically (STM.putTMVar tmvar (-n)) )
+            frame <- Gtk.frameNew
+            Gtk.set frame
+                [ Gtk.containerChild := slider
+                , Gtk.frameLabel     := label
+                ]
+            Gtk.boxPackStart hBox frame Gtk.PackNatural 0
+            Gtk.widgetShowAll hBox
             return (STM.takeTMVar tmvar, Control.Foldl.lastDef s0) )
 
     let __checkBoxAt :: Bool -> Text -> Cell Bool
@@ -466,6 +487,7 @@ ui setup process title (Updatable k) = do
             { _checkBoxAt      = __checkBoxAt
             , _spinButtonAt    = __spinButtonAt
             , _hscaleWithRange = __hscaleWithRange
+            , _vscaleWithRange = __vscaleWithRange
             , _entryAt         = __entryAt
             , _radioButton     = __radioButton
             }
@@ -521,6 +543,15 @@ hscale
     -- ^ Step size
     -> Updatable Double
 hscale = hscaleAt 0
+
+-- | A `Double` vertical slider
+vscale
+    :: Text
+    -- ^ Label
+    -> Double
+    -- ^ Step size
+    -> Updatable Double
+vscale = vscaleAt 0
 
 -- | A `Text` entry
 entry
@@ -590,6 +621,33 @@ hscaleWithRange
     -> Updatable Double
 hscaleWithRange b0 b1 s0 label x =
     Updatable (\control -> _hscaleWithRange control b0 b1 s0 label x)
+
+-- | Same as `vscaleButton` except that you can specify the initial state
+vscaleAt
+    :: Double
+    -- ^ Initial state
+    -> Text
+    -- ^ Label
+    -> Double
+    -- ^ Step size
+    -> Updatable Double
+vscaleAt = vscaleWithRange (fromIntegral (minBound :: Int)) (fromIntegral (maxBound :: Int))
+
+-- | Same as `vscaleButton` except that you can specify the range and initial state
+vscaleWithRange
+    :: Double
+    -- ^ Minimum value
+    -> Double
+    -- ^ Maximum value
+    -> Double
+    -- ^ Initial state
+    -> Text
+    -- ^ Label
+    -> Double
+    -- ^ Step size
+    -> Updatable Double
+vscaleWithRange b0 b1 s0 label x =
+    Updatable (\control -> _vscaleWithRange control b0 b1 s0 label x)
 
 -- | Same as `entry` except that you can specify the initial state
 entryAt
