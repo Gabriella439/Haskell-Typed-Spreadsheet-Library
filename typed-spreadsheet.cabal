@@ -9,6 +9,7 @@ Author: Gabriel Gonzalez
 Maintainer: Gabriel439@gmail.com
 Bug-Reports: https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library/issues
 Synopsis: Typed and composable spreadsheets
+Tested-With: GHC == 8.0.2, GHC == 8.2.2
 Description:
     This library provides a typed and composable API for building spreadsheets.
     This differs from traditional spreadsheets in a few important ways:
