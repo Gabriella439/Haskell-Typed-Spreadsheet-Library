@@ -1,4 +1,4 @@
-# typed-spreadsheet v1.1.0
+# typed-spreadsheet v1.1.1
 
 `typed-spreadsheet` provides a typed and composable API for building
 spreadsheets.  This differs from traditional spreadsheets in a few important

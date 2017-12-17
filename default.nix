@@ -4,7 +4,7 @@
 }:
 mkDerivation {
   pname = "typed-spreadsheet";
-  version = "1.1.0";
+  version = "1.1.1";
   src = ./.;
   isLibrary = true;
   isExecutable = true;
@@ -12,9 +12,7 @@ mkDerivation {
     async base diagrams-cairo diagrams-gtk diagrams-lib foldl gtk
     microlens stm text transformers
   ];
-  executableHaskellDepends = [
-    base diagrams-cairo diagrams-lib text
-  ];
+  executableHaskellDepends = [ base diagrams-lib text ];
   description = "Typed and composable spreadsheets";
   license = stdenv.lib.licenses.bsd3;
 }
