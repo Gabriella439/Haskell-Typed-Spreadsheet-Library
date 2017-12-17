@@ -17,8 +17,8 @@ toColor Purple = purple
 
 main :: IO ()
 main = graphicalUI "Example program" $ do
-    color <- radioButton      "Color"        Red [Orange .. Purple]
-    r     <- spinButtonAt 100 "Radius"       1
-    x     <- spinButton       "X Coordinate" 1
-    y     <- spinButton       "Y Coordinate" 1
+    color <- radioButton                   "Color"        Red [Orange .. Purple]
+    r     <- spinButtonAt    100           "Radius"       1
+    x     <- hscaleWithRange (-200) 200 0  "X Coordinate" 10
+    y     <- vscaleWithRange (-200) 200 0  "Y Coordinate" 10
     return (circle r # fc (toColor color) # translate (r2 (x, y)))
