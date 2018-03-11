@@ -4,7 +4,7 @@
 }:
 mkDerivation {
   pname = "typed-spreadsheet";
-  version = "1.1.1";
+  version = "1.1.2";
   src = ./.;
   isLibrary = true;
   isExecutable = true;

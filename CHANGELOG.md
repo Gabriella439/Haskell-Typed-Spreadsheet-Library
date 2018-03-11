@@ -15,3 +15,7 @@
 1.1.1
 
 * Add new controls for vertical and horizontal scales
+
+1.1.2
+
+* Expose `ui` function
