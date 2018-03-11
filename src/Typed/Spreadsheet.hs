@@ -92,6 +92,7 @@ module Typed.Spreadsheet (
     , textUI
     , cellUI
     , graphicalUI
+    , ui
 
     -- * Controls
     , checkBox
@@ -333,11 +334,15 @@ graphicalUI = ui setupGraphical processGraphicalEvent
         let diagram' = diagram # reflectY # translate (r2 (w', h'))
         Diagrams.Backend.Gtk.renderToGtk drawWindow diagram'
 
--- | Shared logic for `textUI` and `graphicalUI`
-ui  :: (Gtk.HBox -> IO a)
-    -> (a -> b -> IO ())
+-- | Underlying function for building custom user interfaces
+ui  :: (Gtk.HBox -> IO resource)
+    -- ^ Acquire initial resource
+    -> (resource -> event -> IO ())
+    -- ^ Callback function to process each event
     -> Text
-    -> Updatable b
+    -- ^ Window title
+    -> Updatable event
+    -- ^ Event stream
     -> IO ()
 ui setup process title (Updatable k) = do
     _ <- Gtk.initGUI
