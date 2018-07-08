@@ -19,3 +19,7 @@
 1.1.2
 
 * Expose `ui` function
+
+1.1.3
+
+* Support GHC 8.4
