@@ -1,5 +1,5 @@
 Name: typed-spreadsheet
-Version: 1.1.2
+Version: 1.1.3
 Cabal-Version: >=1.8.0.2
 Build-Type: Simple
 License: BSD3
@@ -37,7 +37,7 @@ Library
         diagrams-cairo >= 1.3    && < 1.5 ,
         diagrams-gtk   >= 1.3    && < 1.5 ,
         diagrams-lib   >= 1.3    && < 1.5 ,
-        foldl          >= 1.1    && < 1.3 ,
+        foldl          >= 1.1    && < 1.4 ,
         gtk            >= 0.13   && < 0.15,
         microlens                   < 0.5 ,
         stm                         < 2.5 ,

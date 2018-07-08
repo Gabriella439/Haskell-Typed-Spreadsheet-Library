@@ -1,6 +1,7 @@
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ApplicativeDo              #-}
+{-# LANGUAGE CPP              #-}
 
 -- | The following program:
 --
@@ -167,10 +168,20 @@ instance Applicative Updatable where
 
     Updatable mf <*> Updatable mx = Updatable (liftA2 (<*>) mf mx)
 
+#if MIN_VERSION_base(4,11,0)
+instance Semigroup a => Semigroup (Updatable a) where
+    (<>) = liftA2 (<>)
+
+instance Monoid a => Monoid (Updatable a) where
+    mempty = pure mempty
+
+#else
 instance Monoid a => Monoid (Updatable a) where
     mempty = pure mempty
 
     mappend = liftA2 mappend
+#endif
+
 
 instance IsString a => IsString (Updatable a) where
     fromString str = pure (fromString str)
