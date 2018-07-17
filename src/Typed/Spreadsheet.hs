@@ -123,10 +123,12 @@ import Control.Applicative
 import Control.Concurrent.STM (STM)
 import Control.Foldl (Fold(..))
 import Control.Monad.IO.Class (liftIO)
+import Data.Maybe (fromMaybe)
 import Data.String (IsString(..))
 import Data.Text (Text)
 import Diagrams.Backend.Cairo (Cairo)
-import Diagrams.Prelude (Diagram, r2, reflectY, translate, (#))
+import Diagrams.BoundingBox (boundingBox, boxExtents, boxCenter)
+import Diagrams.Prelude (Diagram, r2, reflectY, translate, (#), V2(..), Point(..), scale, negated)
 import Lens.Micro (_Left, _Right)
 import Graphics.UI.Gtk (AttrOp((:=)))
 
@@ -340,9 +342,30 @@ graphicalUI = ui setupGraphical processGraphicalEvent
     processGraphicalEvent drawingArea diagram = do
         drawWindow <- Gtk.widgetGetDrawWindow drawingArea
         (w, h) <- Gtk.widgetGetSize drawingArea
-        let w' = fromIntegral w / 2
-        let h' = fromIntegral h / 2
-        let diagram' = diagram # reflectY # translate (r2 (w', h'))
+        let w' = fromIntegral w
+        let h' = fromIntegral h
+        let boundsD = boundingBox diagram
+        let V2 bw bh = boxExtents boundsD
+        let border = max 1 (sqrt (w' ^ (2 :: Int) + h' ^ (2 :: Int)) * 0.05)
+        let nearZero x = abs x < 1e-15
+        let scaleW =
+              if nearZero bw
+                then 1
+                else max 1 (w' - border) / bw
+        let scaleH =
+              if nearZero bh
+              then 1
+              else max 1 (h' - border) / bh
+        let scaleUniform
+              | scaleW <= 1 && scaleH >= 1 = scaleW
+              | scaleH <= 1 && scaleW >= 1 = scaleH
+              | otherwise = min scaleH scaleW
+        let P boundsCenter = fromMaybe (P (V2 0 0)) (boxCenter boundsD)
+        let diagram' = diagram
+                     # translate (negated boundsCenter)
+                     # scale scaleUniform
+                     # reflectY
+                     # translate (r2 (w' / 2, h' / 2))
         Diagrams.Backend.Gtk.renderToGtk drawWindow diagram'
 
 -- | Underlying function for building custom user interfaces
