@@ -23,3 +23,7 @@
 1.1.3
 
 * Support GHC 8.4
+
+1.1.4
+
+* Increase upper bounds on dependencies
