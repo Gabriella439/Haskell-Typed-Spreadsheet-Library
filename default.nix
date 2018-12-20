@@ -2,11 +2,9 @@ let
   fetchNixpkgs = import ./nix/fetchNixpkgs.nix;
 
   nixpkgs = fetchNixpkgs {
-    rev = "804060ff9a79ceb0925fe9ef79ddbf564a225d47";
+    rev = "6a7dea9330c3d1f1f53610e753aada029eb8b86e";
 
-    sha256 = "01pb6p07xawi60kshsxxq1bzn8a0y4s5jjqvhkwps4f5xjmmwav3";
-
-    outputSha256 = "0ga345hgw6v2kzyhvf5kw96hf60mx5pbd9c4qj5q4nan4lr7nkxn";
+    sha256 = "0i8nf8szg27vnha8l22k9wwj3fyya6mf4b6g05fi1kyv3mmazhq7";
   };
 
   readDirectory = import ./nix/readDirectory.nix;
