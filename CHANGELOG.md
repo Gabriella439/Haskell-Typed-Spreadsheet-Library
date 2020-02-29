@@ -27,3 +27,7 @@
 1.1.4
 
 * Increase upper bounds on dependencies
+
+1.1.5
+
+* Increase upper bounds on dependencies
