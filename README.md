@@ -30,7 +30,7 @@ $ # Builds the executables
 $ stack build --stack-yaml=osx.yaml --install-ghc
 
 $ # Runs the text output example
-$ stack exec  --stack-yaml=osx.yaml typed-spreadsheet-example
+$ stack exec  --stack-yaml=osx.yaml typed-spreadsheet-example-text
 
 $ # Runs the graphical example
 $ stack exec  --stack-yaml=osx.yaml typed-spreadsheet-example-graphics
@@ -52,7 +52,7 @@ $ # Builds the executables
 $ stack build --install-ghc
 
 $ # Runs the text output example
-$ stack exec typed-spreadsheet-example
+$ stack exec typed-spreadsheet-example-text
 
 $ # Runs the graphical example
 $ stack exec typed-spreadsheet-example-graphics
