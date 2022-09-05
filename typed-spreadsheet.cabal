@@ -4,10 +4,10 @@ Cabal-Version: >=1.8.0.2
 Build-Type: Simple
 License: BSD3
 License-File: LICENSE
-Copyright: 2015 Gabriel Gonzalez
-Author: Gabriel Gonzalez
-Maintainer: Gabriel439@gmail.com
-Bug-Reports: https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library/issues
+Copyright: 2015 Gabriella Gonzalez
+Author: Gabriella Gonzalez
+Maintainer: GenuineGabriella@gmail.com
+Bug-Reports: https://github.com/Gabriella439/Haskell-Typed-Spreadsheet-Library/issues
 Synopsis: Typed and composable spreadsheets
 Tested-With: GHC == 8.0.2, GHC == 8.2.2
 Description:
@@ -27,7 +27,7 @@ Description:
 Category: GUI
 Source-Repository head
     Type: git
-    Location: https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library
+    Location: https://github.com/Gabriella439/Haskell-Typed-Spreadsheet-Library
 
 Library
     Hs-Source-Dirs: src
