@@ -24,7 +24,7 @@ $ # Installs the Gtk+ library
 $ brew install gtk
 
 $ # Creates a local copy of this repository
-$ git clone https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library.git
+$ git clone https://github.com/Gabriella439/Haskell-Typed-Spreadsheet-Library.git
 
 $ # Builds the executables
 $ stack build --stack-yaml=osx.yaml --install-ghc
@@ -46,7 +46,7 @@ $ # Install the Gtk+ 2.0 development headers
 $ sudo apt-get install libgtk2.0-dev
 
 $ # Creates a local copy of this repository
-$ git clone https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library.git
+$ git clone https://github.com/Gabriella439/Haskell-Typed-Spreadsheet-Library.git
 
 $ # Builds the executables
 $ stack build --install-ghc
@@ -65,7 +65,7 @@ please submit a pull request.
 
 ## Examples
 
-The [executable code](https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library/blob/master/exec/Text.hs)
+The [executable code](https://github.com/Gabriella439/Haskell-Typed-Spreadsheet-Library/blob/master/exec/Text.hs)
 for first example is short:
 
 ```haskell
@@ -89,7 +89,7 @@ the output on the right-hand side:
 ![](http://i.imgur.com/TTxgSwN.png)
 
 You can also output updatable diagrams built using the `diagrams` library, such
-as [in this example](https://github.com/Gabriel439/Haskell-Typed-Spreadsheet-Library/blob/master/exec/Graphics.hs):
+as [in this example](https://github.com/Gabriella439/Haskell-Typed-Spreadsheet-Library/blob/master/exec/Graphics.hs):
 
 ```haskell
 {-# LANGUAGE ApplicativeDo     #-}
@@ -234,7 +234,7 @@ output option instead of a text-based output.
 
 ## Development Status
 
-[![Build Status](https://travis-ci.org/Gabriel439/Haskell-Typed-Spreadsheet-Library.png)](https://travis-ci.org/Gabriel439/Haskell-Typed-Spreadsheet-Library)
+[![Build Status](https://travis-ci.org/Gabriella439/Haskell-Typed-Spreadsheet-Library.png)](https://travis-ci.org/Gabriella439/Haskell-Typed-Spreadsheet-Library)
 
 The high-level API for this library is unlikely to change.  I expect most of
 the volatility early on will be in how much configuration for controls to expose
@@ -247,7 +247,7 @@ the API.
 
 ## LICENSE (BSD 3-Clause)
 
-Copyright (c) 2014 Gabriel Gonzalez
+Copyright (c) 2014 Gabriella Gonzalez
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -257,7 +257,7 @@ are permitted provided that the following conditions are met:
     * Redistributions in binary form must reproduce the above copyright notice,
       this list of conditions and the following disclaimer in the documentation
       and/or other materials provided with the distribution.
-    * Neither the name of Gabriel Gonzalez nor the names of other contributors
+    * Neither the name of Gabriella Gonzalez nor the names of other contributors
       may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
